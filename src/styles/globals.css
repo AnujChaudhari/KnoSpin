@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100;
+  }
+}
+
+@layer components {
+  .glassmorphism {
+    @apply bg-white/30 dark:bg-gray-800/30 backdrop-blur-lg border border-white/20 dark:border-gray-700/30;
+  }
+  .btn-gradient {
+    @apply bg-gradient-to-r from-primary-600 to-primary-500 text-white font-semibold py-2 px-4 rounded-lg shadow hover:from-primary-700 hover:to-primary-600 transition-all duration-200;
+  }
+  .card {
+    @apply bg-white dark:bg-gray-800 rounded-2xl shadow-md p-4 transition-transform hover:scale-[1.02] border border-gray-100 dark:border-gray-700;
+  }
+}
