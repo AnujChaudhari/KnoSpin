@@ -1,4 +1,4 @@
-import emailjs from 'emailjs/browser';
+import emailjs from '@emailjs/browser';
 
 export const sendOrderConfirmation = (orderData) => {
   // Build HTML table rows for items
