@@ -1,6 +1,5 @@
 "use client";
 import { useState } from "react";
-import { useQuery } from "react-query"; // not installed; we'll simplify: fetch categories manually
 import { useEffect } from "react";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
