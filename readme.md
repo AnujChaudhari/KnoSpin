@@ -1,4 +1,4 @@
-# ShopHub - Mobile E-Commerce
+# Quick Shop - Mobile E-Commerce
 
 A complete, modern e-commerce website built to run perfectly on mobile devices. Entirely free to build and host.
 
