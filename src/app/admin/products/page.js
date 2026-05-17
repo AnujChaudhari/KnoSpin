@@ -10,20 +10,16 @@ import { HiPencil, HiTrash } from "react-icons/hi";
 
 export default function AdminProducts() {
   const [products, setProducts] = useState([]);
-
   const fetchProducts = async () => {
     const snap = await getDocs(collection(db, "products"));
     setProducts(snap.docs.map(d => ({ id: d.id, ...d.data() })));
   };
-
   useEffect(() => { fetchProducts(); }, []);
-
   const deleteProduct = async (id) => {
     await deleteDoc(doc(db, "products", id));
     toast.success("Deleted");
     fetchProducts();
   };
-
   return (
     <div>
       <div className="flex justify-between mb-4">
