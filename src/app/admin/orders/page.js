@@ -8,7 +8,6 @@ import { toast } from "react-hot-toast";
 
 export default function AdminOrders() {
   const [orders, setOrders] = useState([]);
-
   useEffect(() => {
     const fetchOrders = async () => {
       const q = query(collection(db, "orders"), orderBy("createdAt", "desc"));
@@ -20,7 +19,7 @@ export default function AdminOrders() {
 
   const updateStatus = async (orderId, newStatus) => {
     await updateDoc(doc(db, "orders", orderId), { status: newStatus });
-    toast.success("Status updated");
+    toast.success("Updated");
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
   };
 
@@ -32,7 +31,6 @@ export default function AdminOrders() {
           <div key={order.id} className="card">
             <p>Order #{order.id.slice(0,8)} - ₹{order.total}</p>
             <p>Status: {order.status}</p>
-            <p>Items: {order.items?.length || 0}</p>
             <div className="flex gap-2 mt-2">
               {order.status === "pending" && (
                 <>
