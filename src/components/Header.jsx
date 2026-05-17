@@ -15,9 +15,16 @@ export default function Header() {
   return (
     <header className="glassmorphism sticky top-0 z-50 border-b border-gray-200 dark:border-gray-700">
       <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-        <Link href="logo.jpg" className="text-2xl font-bold bg-gradient-to-r from-primary-600 to-purple-600 bg-clip-text text-transparent">
-          Quick Shop
-        </Link>
+        <Link href="/" className="flex items-center gap-2">
+  <img 
+    src="https://res.cloudinary.com/dnattha6y/image/upload/v1779014682/t7hzjqu3hi8fxnnopbua.png"
+    alt="Quick Shop Logo" 
+    className="h-8 w-8 rounded-lg"
+  />
+  <span className="text-2xl font-bold bg-gradient-to-r from-primary-600 to-purple-600 bg-clip-text text-transparent">
+    Quick Shop
+  </span>
+</Link>
         <div className="flex items-center gap-4">
           <ThemeToggle />
           <Link href="/cart" className="relative">
