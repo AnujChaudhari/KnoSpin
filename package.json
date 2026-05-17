@@ -15,7 +15,7 @@
     "next": "14.1.0",
     "react": "18.2.0",
     "react-dom": "18.2.0",
-    "firebase": "^10.12.0",
+    "firebase": "10.12.0",
     "cloudinary-build-url": "^0.2.4",
     "@emailjs/browser": "^3.11.0",
     "razorpay": "^2.9.0",
