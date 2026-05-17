@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import Link from "next/link";
+import Image from "next/image";
 import { HiMenu, HiX, HiShoppingCart, HiHeart, HiUser } from "react-icons/hi";
 import ThemeToggle from "./ThemeToggle";
 import { motion, AnimatePresence } from "framer-motion";
@@ -16,15 +17,17 @@ export default function Header() {
     <header className="glassmorphism sticky top-0 z-50 border-b border-gray-200 dark:border-gray-700">
       <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2">
-  <img 
-    src="https://res.cloudinary.com/dnattha6y/image/upload/v1779014682/t7hzjqu3hi8fxnnopbua.png"
-    alt="Quick Shop Logo" 
-    className="h-8 w-8 rounded-lg"
-  />
-  <span className="text-2xl font-bold bg-gradient-to-r from-primary-600 to-purple-600 bg-clip-text text-transparent">
-    Quick Shop
-  </span>
-</Link>
+          <Image
+            src="https://res.cloudinary.com/dnattha6y/image/upload/v1779014682/t7hzjqu3hi8fxnnopbua.png"
+            alt="Quick Shop Logo"
+            width={32}
+            height={32}
+            className="rounded-lg"
+          />
+          <span className="text-2xl font-bold bg-gradient-to-r from-primary-600 to-purple-600 bg-clip-text text-transparent">
+            Quick Shop
+          </span>
+        </Link>
         <div className="flex items-center gap-4">
           <ThemeToggle />
           <Link href="/cart" className="relative">
