@@ -1,8 +1,5 @@
 "use client";
-import { useState } from "react"; // not installed; we'll simplify: fetch categories manually
-import { useEffect } from "react";
-import { collection, getDocs } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { useState } from "react";
 
 export default function ProductForm({ onSubmit, initialData = {} }) {
   const [form, setForm] = useState({
@@ -16,15 +13,6 @@ export default function ProductForm({ onSubmit, initialData = {} }) {
     onSale: initialData.onSale || false,
   });
   const [images, setImages] = useState([]);
-  const [categories, setCategories] = useState([]);
-
-  useEffect(() => {
-    const fetchCats = async () => {
-      const snap = await getDocs(collection(db, "categories"));
-      setCategories(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    };
-    fetchCats();
-  }, []);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -48,10 +36,7 @@ export default function ProductForm({ onSubmit, initialData = {} }) {
         <input name="price" type="number" value={form.price} onChange={handleChange} placeholder="Price" required className="input-field" />
         <input name="originalPrice" type="number" value={form.originalPrice} onChange={handleChange} placeholder="Original Price" className="input-field" />
       </div>
-      <select name="category" value={form.category} onChange={handleChange} required className="input-field">
-        <option value="">Select Category</option>
-        {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
-      </select>
+      <input name="category" value={form.category} onChange={handleChange} placeholder="Category" className="input-field" />
       <input name="stock" type="number" value={form.stock} onChange={handleChange} placeholder="Stock" className="input-field" />
       <label className="flex items-center gap-2">
         <input type="checkbox" name="featured" checked={form.featured} onChange={handleChange} /> Featured
