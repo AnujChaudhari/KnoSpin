@@ -2,6 +2,7 @@ import './globals.css'
 import { Inter } from 'next/font/google'
 import { AuthProvider } from '@/context/AuthContext'
 import { CartProvider } from '@/context/CartContext'
+import { WishlistProvider } from '@/context/WishlistContext'   // ← यह जोड़ें
 import { ThemeProvider } from 'next-themes'
 import { Toaster } from 'react-hot-toast'
 import Header from '@/components/Header'
@@ -21,10 +22,12 @@ export default function RootLayout({ children }) {
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <AuthProvider>
             <CartProvider>
-              <Header />
-              <main className="flex-grow">{children}</main>
-              <Footer />
-              <Toaster position="top-center" />
+              <WishlistProvider>   {/* ← यह जोड़ें */}
+                <Header />
+                <main className="flex-grow">{children}</main>
+                <Footer />
+                <Toaster position="top-center" />
+              </WishlistProvider>
             </CartProvider>
           </AuthProvider>
         </ThemeProvider>
