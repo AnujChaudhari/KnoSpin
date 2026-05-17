@@ -12,7 +12,7 @@ export default function AddProductPage() {
   const router = useRouter();
 
   const handleSubmit = async (form, images) => {
-    toast.loading("Uploading images...");
+    toast.loading("Uploading...");
     const imageUrls = [];
     for (const file of images) {
       const url = await uploadToCloudinary(file);
