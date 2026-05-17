@@ -1,3 +1,4 @@
+"use client";
 export default function StatCard({ title, value, icon }) {
   return (
     <div className="card flex items-center gap-4 p-6">
