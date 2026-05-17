@@ -10,7 +10,6 @@ import ProductForm from "@/components/admin/ProductForm";
 
 export default function AddProductPage() {
   const router = useRouter();
-
   const handleSubmit = async (form, images) => {
     toast.loading("Uploading...");
     const imageUrls = [];
@@ -30,7 +29,6 @@ export default function AddProductPage() {
     toast.success("Product added!");
     router.push("/admin/products");
   };
-
   return (
     <div>
       <h2 className="text-2xl font-bold mb-4">Add Product</h2>
