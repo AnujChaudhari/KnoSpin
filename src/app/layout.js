@@ -1,11 +1,8 @@
 import './globals.css'
 import { Inter } from 'next/font/google'
-import { AuthProvider } from '@/context/AuthContext'
-import { CartProvider } from '@/context/CartContext'
-import { ThemeProvider } from 'next-themes'
-import { Toaster } from 'react-hot-toast'
-import Header from '@/components/Header'
-import Footer from '@/components/Footer'
+import ClientProviders from '@/components/ClientProviders'
+
+export const dynamic = 'force-dynamic'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -18,18 +15,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.className} min-h-screen flex flex-col`}>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <AuthProvider>
-            <CartProvider>
-              <WishlistProvider>   {/* ← यह जोड़ें */}
-                <Header />
-                <main className="flex-grow">{children}</main>
-                <Footer />
-                <Toaster position="top-center" />
-              </WishlistProvider>
-            </CartProvider>
-          </AuthProvider>
-        </ThemeProvider>
+        <ClientProviders>{children}</ClientProviders>
       </body>
     </html>
   )
