@@ -27,26 +27,29 @@ export default function AdminOrders() {
   return (
     <div>
       <h2 className="text-2xl font-bold mb-4">Orders</h2>
-      {orders.map(order => (
-        <div key={order.id} className="card mb-3">
-          <p>Order #{order.id.slice(0,8)} - ₹{order.total}</p>
-          <p>Status: {order.status}</p>
-          <div className="flex gap-2 mt-2">
-            {order.status === "pending" && (
-              <>
-                <button onClick={() => updateStatus(order.id, "confirmed")} className="bg-blue-500 text-white px-3 py-1 rounded">Confirm</button>
-                <button onClick={() => updateStatus(order.id, "cancelled")} className="bg-red-500 text-white px-3 py-1 rounded">Cancel</button>
-              </>
-            )}
-            {order.status === "confirmed" && (
-              <button onClick={() => updateStatus(order.id, "shipped")} className="bg-green-500 text-white px-3 py-1 rounded">Mark Shipped</button>
-            )}
-            {order.status === "shipped" && (
-              <button onClick={() => updateStatus(order.id, "delivered")} className="bg-purple-500 text-white px-3 py-1 rounded">Mark Delivered</button>
-            )}
+      <div className="space-y-3">
+        {orders.map(order => (
+          <div key={order.id} className="card">
+            <p>Order #{order.id.slice(0,8)} - ₹{order.total}</p>
+            <p>Status: {order.status}</p>
+            <p>Items: {order.items?.length || 0}</p>
+            <div className="flex gap-2 mt-2">
+              {order.status === "pending" && (
+                <>
+                  <button onClick={() => updateStatus(order.id, "confirmed")} className="bg-blue-500 text-white px-3 py-1 rounded">Confirm</button>
+                  <button onClick={() => updateStatus(order.id, "cancelled")} className="bg-red-500 text-white px-3 py-1 rounded">Cancel</button>
+                </>
+              )}
+              {order.status === "confirmed" && (
+                <button onClick={() => updateStatus(order.id, "shipped")} className="bg-green-500 text-white px-3 py-1 rounded">Mark Shipped</button>
+              )}
+              {order.status === "shipped" && (
+                <button onClick={() => updateStatus(order.id, "delivered")} className="bg-purple-500 text-white px-3 py-1 rounded">Mark Delivered</button>
+              )}
+            </div>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 }
