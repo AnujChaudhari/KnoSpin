@@ -25,9 +25,14 @@ export function AuthProvider({ children }) {
       setIsAdmin(false);
       return;
     }
-    const docRef = doc(db, "admins", uid);
-    const snap = await getDoc(docRef);
-    setIsAdmin(snap.exists());
+    try {
+      const docRef = doc(db, "admins", uid);
+      const snap = await getDoc(docRef);
+      setIsAdmin(snap.exists());
+    } catch (error) {
+      console.error("Admin check failed:", error);
+      setIsAdmin(false);
+    }
   }
 
   useEffect(() => {
