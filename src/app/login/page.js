@@ -1,5 +1,6 @@
 "use client";
 export const dynamic = 'force-dynamic';
+
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
@@ -29,8 +30,8 @@ export default function LoginPage() {
       <div className="glassmorphism p-8 rounded-3xl w-full max-w-md space-y-6">
         <h2 className="text-3xl font-bold text-center">Welcome Back</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required className="w-full p-3 border rounded-xl dark:bg-gray-700" />
-          <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required className="w-full p-3 border rounded-xl dark:bg-gray-700" />
+          <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required className="input-field" />
+          <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required className="input-field" />
           <button type="submit" className="btn-gradient w-full py-3">Login</button>
         </form>
         <div className="text-center">
