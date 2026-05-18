@@ -10,8 +10,9 @@ import ProductForm from "@/components/admin/ProductForm";
 
 export default function AddProductPage() {
   const router = useRouter();
+
   const handleSubmit = async (form, images) => {
-    toast.loading("Uploading...");
+    toast.loading("Uploading images...");
     const imageUrls = [];
     for (const file of images) {
       const url = await uploadToCloudinary(file);
@@ -29,9 +30,10 @@ export default function AddProductPage() {
     toast.success("Product added!");
     router.push("/admin/products");
   };
+
   return (
-    <div>
-      <h2 className="text-2xl font-bold mb-4">Add Product</h2>
+    <div className="p-4 md:p-0">
+      <h2 className="text-2xl font-bold mb-6">Add Product</h2>
       <ProductForm onSubmit={handleSubmit} />
     </div>
   );
