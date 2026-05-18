@@ -3,14 +3,10 @@ import { useState } from "react";
 
 export default function ProductForm({ onSubmit, initialData = {} }) {
   const [form, setForm] = useState({
-    name: initialData.name || "",
-    description: initialData.description || "",
-    price: initialData.price || "",
-    originalPrice: initialData.originalPrice || "",
-    category: initialData.category || "",
-    stock: initialData.stock || "",
-    featured: initialData.featured || false,
-    onSale: initialData.onSale || false,
+    name: initialData.name || "", description: initialData.description || "",
+    price: initialData.price || "", originalPrice: initialData.originalPrice || "",
+    category: initialData.category || "", stock: initialData.stock || "",
+    featured: initialData.featured || false, onSale: initialData.onSale || false,
   });
   const [images, setImages] = useState([]);
 
@@ -19,9 +15,7 @@ export default function ProductForm({ onSubmit, initialData = {} }) {
     setForm(prev => ({ ...prev, [name]: type === "checkbox" ? checked : value }));
   };
 
-  const handleImageChange = (e) => {
-    setImages(Array.from(e.target.files));
-  };
+  const handleImageChange = (e) => setImages(Array.from(e.target.files));
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -38,12 +32,8 @@ export default function ProductForm({ onSubmit, initialData = {} }) {
       </div>
       <input name="category" value={form.category} onChange={handleChange} placeholder="Category" className="input-field" />
       <input name="stock" type="number" value={form.stock} onChange={handleChange} placeholder="Stock" className="input-field" />
-      <label className="flex items-center gap-2">
-        <input type="checkbox" name="featured" checked={form.featured} onChange={handleChange} /> Featured
-      </label>
-      <label className="flex items-center gap-2">
-        <input type="checkbox" name="onSale" checked={form.onSale} onChange={handleChange} /> On Sale
-      </label>
+      <label className="flex items-center gap-2"><input type="checkbox" name="featured" checked={form.featured} onChange={handleChange} /> Featured</label>
+      <label className="flex items-center gap-2"><input type="checkbox" name="onSale" checked={form.onSale} onChange={handleChange} /> On Sale</label>
       <input type="file" multiple onChange={handleImageChange} accept="image/*" className="input-field" />
       <button type="submit" className="btn-gradient w-full">Save Product</button>
     </form>
