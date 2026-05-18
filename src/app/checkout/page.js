@@ -108,7 +108,7 @@ export default function CheckoutPage() {
           <h2 className="font-semibold mb-4">Payment Method</h2>
           <div className="flex gap-4">
             <button onClick={() => setPaymentMethod("cod")} className={`py-2 px-4 rounded-lg border ${paymentMethod==='cod'?'bg-primary-600 text-white border-primary-600':'border-gray-300'}`}>Cash on Delivery</button>
-            <button onClick={() => setPaymentMethod("razorpay")} className={`py-2 px-4 rounded-lg border ${paymentMethod==='razorpay'?'bg-primary-600 text-white border-primary-600':'border-gray-300'}`}>Pay Online</button>
+            <button onClick={() => setPaymentMethod("razorpay")} className={`py-2 px-4 rounded-lg border ${paymentMethod==='razorpay'?'bg-primary-600 text-white border-primary-600':'border-gray-300'}`}>No UPI Pay available </button>
           </div>
         </div>
         <div className="card text-lg font-bold flex justify-between">
