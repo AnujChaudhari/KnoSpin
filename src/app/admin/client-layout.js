@@ -5,9 +5,15 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 
+// 🛡️ अस्थायी एडमिन ईमेल लिस्ट – बाद में हटाएँ
+const ADMIN_EMAILS = ["kc812213@gmail.com"];  // <-- अपना असली ईमेल डालें
+
 export default function AdminClientLayout({ children }) {
-  const { user, isAdmin, loading } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
+
+  // एडमिन है या नहीं, इसकी जाँच – अब Firestore की बजाय ईमेल से
+  const isAdmin = user && ADMIN_EMAILS.includes(user.email);
 
   useEffect(() => {
     if (!loading && (!user || !isAdmin)) {
