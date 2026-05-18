@@ -15,10 +15,18 @@ export default function AdminClientLayout({ children }) {
     }
   }, [user, isAdmin, loading, router]);
 
-  if (loading || !user || !isAdmin) {
+  if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         Loading...
+      </div>
+    );
+  }
+
+  if (!user || !isAdmin) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        Access Denied. Redirecting...
       </div>
     );
   }
