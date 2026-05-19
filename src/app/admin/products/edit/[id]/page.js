@@ -28,7 +28,7 @@ export default function EditProductPage() {
     fetchProduct();
   }, [productId, router]);
 
-  const handleSubmit = async (form, images) => {
+  const handleSubmit = async (formData, images) => {
     const imageUrls = [...(initialData.images || [])];
     if (images.length > 0) {
       toast.loading("Uploading new images...");
@@ -39,10 +39,11 @@ export default function EditProductPage() {
       toast.dismiss();
     }
     await updateDoc(doc(db, "products", productId), {
-      ...form,
-      price: Number(form.price),
-      originalPrice: form.originalPrice ? Number(form.originalPrice) : null,
-      stock: Number(form.stock),
+      ...formData,
+      price: Number(formData.price),
+      originalPrice: formData.originalPrice ? Number(formData.originalPrice) : null,
+      discountPercentage: formData.discountPercentage ? Number(formData.discountPercentage) : null,
+      stock: Number(formData.stock),
       images: imageUrls,
       updatedAt: serverTimestamp(),
     });
