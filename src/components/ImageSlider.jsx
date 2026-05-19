@@ -7,24 +7,34 @@ export default function ImageSlider({ images }) {
   const [isZoomed, setIsZoomed] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1);
   const touchStartX = useRef(0);
-  const touchEndX = useRef(0);
+  const touchStartY = useRef(0);
+  const hasMoved = useRef(false);
 
   if (!images || images.length === 0) return null;
 
   const prev = () => setCurrent((prev) => (prev === 0 ? images.length - 1 : prev - 1));
   const next = () => setCurrent((prev) => (prev === images.length - 1 ? 0 : prev + 1));
 
-  // Touch handlers for swipe
+  // Touch handlers – स्वाइप और टैप दोनों संभालें
   const handleTouchStart = (e) => {
     touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+    hasMoved.current = false;
   };
   const handleTouchMove = (e) => {
-    touchEndX.current = e.touches[0].clientX;
+    hasMoved.current = true;
   };
-  const handleTouchEnd = () => {
-    const diff = touchStartX.current - touchEndX.current;
-    if (Math.abs(diff) > 50) { // swipe threshold
-      if (diff > 0) next();
+  const handleTouchEnd = (e) => {
+    const diffX = touchStartX.current - e.changedTouches[0].clientX;
+    const diffY = touchStartY.current - e.changedTouches[0].clientY;
+    // अगर ज्यादा हरकत नहीं हुई, तो इसे टैप मानकर ज़ूम खोलें
+    if (Math.abs(diffX) < 10 && Math.abs(diffY) < 10 && !hasMoved.current) {
+      openZoom();
+      return;
+    }
+    // स्वाइप के लिए
+    if (Math.abs(diffX) > 50) {
+      if (diffX > 0) next();
       else prev();
     }
   };
@@ -39,37 +49,61 @@ export default function ImageSlider({ images }) {
 
   return (
     <>
-      <div className="relative w-full">
+      <div className="relative w-full bg-gray-100 dark:bg-gray-700 rounded-2xl">
+        {/* इमेज कंटेनर – अब object-contain से पूरी इमेज फ़्रेम में दिखेगी */}
         <img
           src={images[current]}
           alt={`Product image ${current + 1}`}
-          className="w-full h-80 object-cover rounded-2xl cursor-pointer"
+          className="w-full h-80 object-contain cursor-pointer"
           onClick={openZoom}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         />
+
+        {/* नेविगेशन एरो (केवल एकाधिक इमेज होने पर) */}
         {images.length > 1 && (
           <>
-            <button onClick={prev} className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 text-white p-2 rounded-full hover:bg-black/70">
+            <button
+              onClick={(e) => { e.stopPropagation(); prev(); }}
+              className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 dark:bg-gray-800/80 text-primary-600 p-2 rounded-full shadow hover:bg-white"
+            >
               <HiChevronLeft />
             </button>
-            <button onClick={next} className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 text-white p-2 rounded-full hover:bg-black/70">
+            <button
+              onClick={(e) => { e.stopPropagation(); next(); }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 dark:bg-gray-800/80 text-primary-600 p-2 rounded-full shadow hover:bg-white"
+            >
               <HiChevronRight />
             </button>
-            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+
+            {/* डॉट्स */}
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2">
               {images.map((_, idx) => (
-                <span key={idx} className={`w-2 h-2 rounded-full ${idx === current ? "bg-primary-500" : "bg-gray-300"}`} />
+                <button
+                  key={idx}
+                  onClick={(e) => { e.stopPropagation(); setCurrent(idx); }}
+                  className={`w-2.5 h-2.5 rounded-full transition-all ${
+                    idx === current ? "bg-primary-500 scale-110" : "bg-gray-400 dark:bg-gray-500"
+                  }`}
+                />
               ))}
             </div>
           </>
         )}
-        <p className="text-xs text-center mt-1 text-gray-500">{current + 1} / {images.length}</p>
+
+        {/* इमेज काउंटर */}
+        <p className="text-xs text-center py-1 text-gray-500">
+          {current + 1} / {images.length}
+        </p>
       </div>
 
-      {/* Zoom Modal */}
+      {/* ज़ूम मोडल */}
       {isZoomed && (
-        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" onClick={closeZoom}>
+        <div
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+          onClick={closeZoom}
+        >
           <div className="relative max-w-4xl max-h-full" onClick={e => e.stopPropagation()}>
             <img
               src={images[current]}
