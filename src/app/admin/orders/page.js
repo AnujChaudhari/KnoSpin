@@ -8,7 +8,7 @@ import { toast } from "react-hot-toast";
 
 export default function AdminOrders() {
   const [orders, setOrders] = useState([]);
-  const [trackingInput, setTrackingInput] = useState({}); // { [orderId]: url }
+  const [trackingInput, setTrackingInput] = useState({});
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -16,7 +16,6 @@ export default function AdminOrders() {
       const snap = await getDocs(q);
       const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       setOrders(list);
-      // Existing tracking URLs pre-fill
       const initialTracking = {};
       list.forEach(o => {
         if (o.trackingUrl) initialTracking[o.id] = o.trackingUrl;
@@ -45,9 +44,19 @@ export default function AdminOrders() {
         {orders.map(order => (
           <div key={order.id} className="card">
             <p className="font-semibold">Order #{order.id.slice(0,8)}</p>
+
+            {/* 👥 ग्राहक का नाम और फ़ोन – यह जोड़ा गया है */}
+            {order.address && (
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                👤 {order.address.name} &nbsp;|&nbsp; 📞 {order.address.phone}
+              </p>
+            )}
+
             <p>Total: ₹{order.total}</p>
             <p>Status: {order.status}</p>
             <p>Items: {order.items?.length || 0}</p>
+
+            {/* ट्रैकिंग URL इनपुट और सेव बटन */}
             <div className="mt-2 flex flex-col sm:flex-row gap-2 items-start sm:items-center">
               <input
                 type="text"
@@ -60,6 +69,8 @@ export default function AdminOrders() {
                 Save Link
               </button>
             </div>
+
+            {/* स्टेटस बदलने के बटन */}
             <div className="flex gap-2 mt-2">
               {order.status === "pending" && (
                 <>
