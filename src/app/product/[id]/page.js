@@ -9,6 +9,7 @@ import { useCart } from "@/context/CartContext";
 import { toast } from "react-hot-toast";
 import ImageSlider from "@/components/ImageSlider";
 import ReviewSection from "@/components/ReviewSection";
+import RelatedProducts from "@/components/RelatedProducts";
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -67,6 +68,7 @@ export default function ProductDetailPage() {
         </div>
       </div>
       <ReviewSection productId={product.id} />
+              <RelatedProducts category={product.category} currentProductId={product.id} />
     </div>
   );
 }
