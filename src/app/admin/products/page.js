@@ -8,6 +8,10 @@ import Link from "next/link";
 import { toast } from "react-hot-toast";
 import { HiPencil, HiTrash, HiPlus } from "react-icons/hi";
 
+const [search, setSearch] = useState("");
+// ...
+<input placeholder="Search by code or name" value={search} onChange={e => setSearch(e.target.value)} className="input-field mb-4" />
+// और filtered products: products.filter(p => p.name.toLowerCase().includes(search.toLowerCase()) || p.productCode?.toLowerCase().includes(search.toLowerCase()))
 export default function AdminProducts() {
   const [products, setProducts] = useState([]);
 
