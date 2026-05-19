@@ -8,29 +8,58 @@ import { toast } from "react-hot-toast";
 
 export default function AdminOrders() {
   const [orders, setOrders] = useState([]);
+  const [trackingInput, setTrackingInput] = useState({}); // { [orderId]: url }
+
   useEffect(() => {
     const fetchOrders = async () => {
       const q = query(collection(db, "orders"), orderBy("createdAt", "desc"));
       const snap = await getDocs(q);
-      setOrders(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setOrders(list);
+      // Existing tracking URLs pre-fill
+      const initialTracking = {};
+      list.forEach(o => {
+        if (o.trackingUrl) initialTracking[o.id] = o.trackingUrl;
+      });
+      setTrackingInput(initialTracking);
     };
     fetchOrders();
   }, []);
 
   const updateStatus = async (orderId, newStatus) => {
     await updateDoc(doc(db, "orders", orderId), { status: newStatus });
-    toast.success("Updated");
+    toast.success("Status updated");
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
   };
 
+  const saveTrackingUrl = async (orderId) => {
+    const url = trackingInput[orderId] || '';
+    await updateDoc(doc(db, "orders", orderId), { trackingUrl: url });
+    toast.success("Tracking link saved");
+  };
+
   return (
-    <div>
+    <div className="p-4 md:p-0">
       <h2 className="text-2xl font-bold mb-4">Orders</h2>
-      <div className="space-y-3">
+      <div className="space-y-4">
         {orders.map(order => (
           <div key={order.id} className="card">
-            <p>Order #{order.id.slice(0,8)} - ₹{order.total}</p>
+            <p className="font-semibold">Order #{order.id.slice(0,8)}</p>
+            <p>Total: ₹{order.total}</p>
             <p>Status: {order.status}</p>
+            <p>Items: {order.items?.length || 0}</p>
+            <div className="mt-2 flex flex-col sm:flex-row gap-2 items-start sm:items-center">
+              <input
+                type="text"
+                placeholder="Tracking URL"
+                value={trackingInput[order.id] || ''}
+                onChange={e => setTrackingInput({ ...trackingInput, [order.id]: e.target.value })}
+                className="input-field flex-grow"
+              />
+              <button onClick={() => saveTrackingUrl(order.id)} className="btn-gradient whitespace-nowrap">
+                Save Link
+              </button>
+            </div>
             <div className="flex gap-2 mt-2">
               {order.status === "pending" && (
                 <>
