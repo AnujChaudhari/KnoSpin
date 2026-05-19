@@ -11,7 +11,7 @@ import ProductForm from "@/components/admin/ProductForm";
 export default function AddProductPage() {
   const router = useRouter();
 
-  const handleSubmit = async (form, images) => {
+  const handleSubmit = async (formData, images) => {
     toast.loading("Uploading...");
     const imageUrls = [];
     for (const file of images) {
@@ -20,7 +20,7 @@ export default function AddProductPage() {
     }
     toast.dismiss();
 
-    // Generate product code
+    // Generate product code (Q00001...)
     const counterRef = doc(db, "counters", "productCode");
     const counterSnap = await getDoc(counterRef);
     let nextNumber = 1;
@@ -30,14 +30,15 @@ export default function AddProductPage() {
     } else {
       await setDoc(counterRef, { value: 1 });
     }
-    const productCode = "Q" + String(nextNumber).padStart(5, '0'); // e.g., Q00001
+    const productCode = "Q" + String(nextNumber).padStart(5, '0');
 
     await addDoc(collection(db, "products"), {
-      ...form,
+      ...formData,
       productCode,
-      price: Number(form.price),
-      originalPrice: form.originalPrice ? Number(form.originalPrice) : null,
-      stock: Number(form.stock),
+      price: Number(formData.price),
+      originalPrice: formData.originalPrice ? Number(formData.originalPrice) : null,
+      discountPercentage: formData.discountPercentage ? Number(formData.discountPercentage) : null,
+      stock: Number(formData.stock),
       images: imageUrls,
       createdAt: serverTimestamp(),
     });
