@@ -1,7 +1,6 @@
 import emailjs from '@emailjs/browser';
 
 export const sendOrderConfirmation = (orderData) => {
-  // Build HTML table rows for items
   const itemsHtml = orderData.items.map(item => {
     const subtotal = (item.price * item.quantity).toFixed(2);
     return `<tr>
@@ -11,11 +10,11 @@ export const sendOrderConfirmation = (orderData) => {
   }).join('');
 
   const templateParams = {
-    to_email: orderData.email,          // recipient email
-    to_name: orderData.name,            // customer name
-    order_id: orderData.orderId,        // order number
-    total: orderData.total.toFixed(2),  // total with 2 decimals
-    items: itemsHtml,                   // HTML string for items (use {{{items}}} in template)
+    to_email: orderData.email,          // ✅ अब यह मिलेगा
+    to_name: orderData.address?.name || 'Customer',
+    order_id: orderData.orderId,
+    total: orderData.total.toFixed(2),
+    items: itemsHtml,
     address_name: orderData.address?.name || '',
     address_phone: orderData.address?.phone || '',
     address_street: orderData.address?.street || '',
