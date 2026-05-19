@@ -7,9 +7,11 @@ import {
   onAuthStateChanged,
   signInWithPopup,
   sendPasswordResetEmail,
+  sendEmailVerification,
 } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { auth, googleProvider, db } from "@/lib/firebase";
+import { toast } from "react-hot-toast";
 
 const AuthContext = createContext();
 
@@ -48,11 +50,26 @@ export function AuthProvider({ children }) {
     return unsubscribe;
   }, []);
 
-  const signup = (email, password) =>
-    createUserWithEmailAndPassword(auth, email, password);
+  // साइनअप – अकाउंट बनाने के बाद ईमेल वेरिफ़िकेशन भेजें
+  const signup = async (email, password) => {
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    await sendEmailVerification(userCredential.user);
+    toast.success("Account created! Please verify your email before login.");
+    // साइनअप के बाद ऑटो लॉगिन न करें – वेरिफ़िकेशन ज़रूरी है
+    await signOut(auth);
+    return userCredential;
+  };
 
-  const login = (email, password) =>
-    signInWithEmailAndPassword(auth, email, password);
+  // लॉगिन – ईमेल वेरिफ़िकेशन चेक करें
+  const login = async (email, password) => {
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    if (!userCredential.user.emailVerified) {
+      toast.error("Please verify your email first. Check your inbox.");
+      await signOut(auth);
+      throw new Error("Email not verified");
+    }
+    return userCredential;
+  };
 
   const logout = () => signOut(auth);
 
