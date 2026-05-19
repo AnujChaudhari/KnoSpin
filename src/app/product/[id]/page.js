@@ -7,6 +7,7 @@ import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { useCart } from "@/context/CartContext";
 import { toast } from "react-hot-toast";
+import ReviewSection from "@/components/ReviewSection";
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -44,6 +45,9 @@ export default function ProductDetailPage() {
         />
         <div className="space-y-4">
           <h1 className="text-3xl font-bold">{product.name}</h1>
+          {product.productCode && (
+            <p className="text-sm text-gray-500">Code: {product.productCode}</p>
+          )}
           <p className="text-2xl font-bold text-primary-600">₹{product.price}</p>
           {product.originalPrice && (
             <p className="text-lg line-through text-gray-400">
@@ -65,6 +69,7 @@ export default function ProductDetailPage() {
           </button>
         </div>
       </div>
+      <ReviewSection productId={product.id} />
     </div>
   );
 }
