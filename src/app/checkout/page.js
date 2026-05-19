@@ -26,6 +26,7 @@ export default function CheckoutPage() {
 
     const orderData = {
       userId: user.uid,
+      email: user.email,
       items: cart,
       total: cartTotal - couponDiscount,
       address,
@@ -83,6 +84,12 @@ export default function CheckoutPage() {
         ...orderData,
         paymentStatus: "pending",
       });
+      // ईमेल भेजें
+      sendOrderConfirmation({
+        ...orderData,
+        orderId: docRef.id,
+      }).catch(err => console.error("Email send failed:", err));
+      
       sendOrderConfirmation({ ...orderData, orderId: docRef.id });
       clearCart();
       toast.success("Order placed with Cash on Delivery");
