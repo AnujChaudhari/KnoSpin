@@ -8,12 +8,9 @@ import Link from "next/link";
 import { toast } from "react-hot-toast";
 import { HiPencil, HiTrash, HiPlus } from "react-icons/hi";
 
-const [search, setSearch] = useState("");
-// ...
-<input placeholder="Search by code or name" value={search} onChange={e => setSearch(e.target.value)} className="input-field mb-4" />
-// और filtered products: products.filter(p => p.name.toLowerCase().includes(search.toLowerCase()) || p.productCode?.toLowerCase().includes(search.toLowerCase()))
 export default function AdminProducts() {
   const [products, setProducts] = useState([]);
+  const [search, setSearch] = useState("");  // <-- सही जगह
 
   const fetchProducts = async () => {
     const snap = await getDocs(collection(db, "products"));
@@ -28,6 +25,12 @@ export default function AdminProducts() {
     fetchProducts();
   };
 
+  // फ़िल्टर – कोड या नाम से खोजें
+  const filtered = products.filter(p =>
+    p.name?.toLowerCase().includes(search.toLowerCase()) ||
+    p.productCode?.toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
     <div className="p-4 md:p-0">
       <div className="flex justify-between items-center mb-6">
@@ -36,14 +39,24 @@ export default function AdminProducts() {
           <HiPlus /> Add Product
         </Link>
       </div>
-      {products.length === 0 && <p>No products yet. Click "Add Product" to create one.</p>}
+
+      {/* सर्च इनपुट */}
+      <input
+        placeholder="Search by code or name"
+        value={search}
+        onChange={e => setSearch(e.target.value)}
+        className="input-field mb-4"
+      />
+
+      {filtered.length === 0 && <p>No products yet. Click "Add Product" to create one.</p>}
       <div className="space-y-3">
-        {products.map(p => (
+        {filtered.map(p => (
           <div key={p.id} className="card flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div className="flex items-center gap-4">
               <img src={p.images?.[0] || "/placeholder.jpg"} className="w-16 h-16 object-cover rounded-lg" />
               <div>
                 <h4 className="font-semibold">{p.name}</h4>
+                <p className="text-xs text-gray-500">Code: {p.productCode || "N/A"}</p>
                 <p className="text-primary-600">₹{p.price} | Stock: {p.stock || 0}</p>
               </div>
             </div>
