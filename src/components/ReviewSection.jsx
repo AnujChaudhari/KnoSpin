@@ -44,7 +44,6 @@ export default function ReviewSection({ productId }) {
       setComment("");
       setRating(5);
       toast.success("Review submitted!");
-      // Refresh reviews
       const q = query(collection(db, "reviews"), where("productId", "==", productId), orderBy("createdAt", "desc"));
       const snap = await getDocs(q);
       setReviews(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
@@ -62,7 +61,6 @@ export default function ReviewSection({ productId }) {
         <span className="text-yellow-500 text-lg">⭐</span>
         <span className="text-sm text-gray-500">({reviews.length} reviews)</span>
       </div>
-      {/* Review form */}
       <form onSubmit={handleSubmit} className="mb-6 p-4 border rounded-xl bg-gray-50 dark:bg-gray-700">
         <div className="flex items-center gap-2 mb-2">
           <label>Your Rating:</label>
@@ -75,7 +73,6 @@ export default function ReviewSection({ productId }) {
           {loading ? "Submitting..." : "Submit Review"}
         </button>
       </form>
-      {/* Reviews list */}
       <div className="space-y-3">
         {reviews.map(review => (
           <div key={review.id} className="border-b pb-2">
