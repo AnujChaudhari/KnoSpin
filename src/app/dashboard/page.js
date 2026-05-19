@@ -26,9 +26,6 @@ export default function DashboardPage() {
         <Link href="/dashboard/profile" className="card hover:bg-gray-100 dark:hover:bg-gray-700">
           👤 My Profile
         </Link>
-        <Link href="/dashboard/addresses" className="card hover:bg-gray-100 dark:hover:bg-gray-700">
-          📍 Saved Addresses
-        </Link>
       </div>
     </div>
   );
