@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { HiHome, HiShoppingBag, HiCollection, HiUsers, HiTag, HiMenu, HiX } from "react-icons/hi";
+import { HiHome, HiShoppingBag, HiCollection, HiUsers, HiTag, HiMenu, HiX, HiPhotograph } from "react-icons/hi";
 import { useState } from "react";
 
 const links = [
@@ -10,6 +10,7 @@ const links = [
   { href: "/admin/orders", label: "Orders", icon: <HiCollection /> },
   { href: "/admin/users", label: "Users", icon: <HiUsers /> },
   { href: "/admin/categories", label: "Categories", icon: <HiTag /> },
+  { href: "/admin/banners", label: "Banners", icon: <HiPhotograph /> },
 ];
 
 export default function AdminSidebar() {
