@@ -7,6 +7,7 @@ import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { useCart } from "@/context/CartContext";
 import { toast } from "react-hot-toast";
+import ImageSlider from "@/components/ImageSlider";
 import ReviewSection from "@/components/ReviewSection";
 
 export default function ProductDetailPage() {
