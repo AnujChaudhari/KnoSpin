@@ -38,27 +38,7 @@ export default function Home() {
   return (
     <div className="px-4 md:px-8 max-w-7xl mx-auto">
       {/* Hero Banner */}
-      <motion.section
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="my-6 rounded-3xl bg-gradient-to-r from-primary-600 to-purple-600 text-white p-6 md:p-12 flex flex-col md:flex-row items-center justify-between"
-      >
-        <div className="space-y-4">
-          <h1 className="text-3xl md:text-5xl font-bold">Summer Sale is ON! 🔥</h1>
-          <p className="text-lg opacity-90">Up to 60% off on selected items. Grab now!</p>
-          <a
-            href="/products?filter=sale"
-            className="inline-block bg-white text-primary-600 font-semibold px-6 py-3 rounded-full mt-4 hover:bg-gray-100 transition"
-          >
-            Shop Now
-          </a>
-        </div>
-        <img
-          src="https://res.cloudinary.com/demo/image/upload/v1/samples/shoe.jpg"
-          alt="hero"
-          className="w-60 md:w-80 mt-6 md:mt-0 rounded-2xl"
-        />
-      </motion.section>
+import HeroBanner from "@/components/HeroBanner";
 
       {/* Search */}
       <SearchBar />
