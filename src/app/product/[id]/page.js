@@ -38,11 +38,7 @@ export default function ProductDetailPage() {
   return (
     <div className="max-w-4xl mx-auto p-4">
       <div className="grid md:grid-cols-2 gap-6">
-        <img
-          src={product.images?.[0] || "/placeholder.jpg"}
-          alt={product.name}
-          className="w-full h-80 object-cover rounded-2xl"
-        />
+        <ImageSlider images={product.images} />
         <div className="space-y-4">
           <h1 className="text-3xl font-bold">{product.name}</h1>
           {product.productCode && (
