@@ -52,9 +52,9 @@ export default function ProductDetailPage() {
               ₹{product.originalPrice}
             </p>
           )}
-          <p className="text-gray-600 dark:text-gray-300">
-            {product.description}
-          </p>
+          <p className="text-gray-600 dark:text-gray-300 whitespace-pre-wrap break-words">
+  {product.description}
+</p>
           <p>Stock: {product.stock || 0}</p>
           <button
             onClick={() => {
