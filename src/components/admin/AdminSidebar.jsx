@@ -11,6 +11,7 @@ const links = [
   { href: "/admin/users", label: "Users", icon: <HiUsers /> },
   { href: "/admin/categories", label: "Categories", icon: <HiTag /> },
   { href: "/admin/banners", label: "Banners", icon: <HiPhotograph /> },
+  { href: "/admin/referrals", label: "Referrals", icon: <HiUsers /> },
 ];
 
 export default function AdminSidebar() {
