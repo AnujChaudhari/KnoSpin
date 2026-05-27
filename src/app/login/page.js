@@ -1,7 +1,7 @@
 "use client";
 export const dynamic = 'force-dynamic';
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -9,10 +9,32 @@ import { toast } from "react-hot-toast";
 import { FcGoogle } from "react-icons/fc";
 
 export default function LoginPage() {
-  const { login, googleLogin } = useAuth();
+  const { user, loading, login, googleLogin } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  // 🔴 Fix: Agar already logged in hai to home page par redirect karo
+  useEffect(() => {
+    if (!loading && user) {
+      router.push("/");
+    }
+  }, [user, loading, router]);
+
+  // 🔴 Fix: Loading state dikhao jab tak Firebase respond kare
+  if (loading) {
+    return (
+      <div className="min-h-[80vh] flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-500">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // 🔴 Fix: Agar user already logged in hai to kuch mat dikhao (redirect ho jayega)
+  if (user) return null;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
