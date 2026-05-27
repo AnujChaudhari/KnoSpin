@@ -27,8 +27,11 @@ export default function DashboardPage() {
           👤 My Profile
         </Link>
         <Link href="/dashboard/referrals" className="card hover:bg-gray-100 dark:hover:bg-gray-700">
-  🔗 Refer & Earn
-</Link>
+          🔗 Refer & Earn
+        </Link>
+        <Link href="/dashboard/wallet" className="card hover:bg-gray-100 dark:hover:bg-gray-700">
+          💰 My Wallet
+        </Link>
       </div>
     </div>
   );
