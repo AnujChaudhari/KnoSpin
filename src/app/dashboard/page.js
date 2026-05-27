@@ -32,6 +32,9 @@ export default function DashboardPage() {
         <Link href="/dashboard/wallet" className="card hover:bg-gray-100 dark:hover:bg-gray-700">
           💰 My Wallet
         </Link>
+        <Link href="/leaderboard" className="card hover:bg-gray-100 dark:hover:bg-gray-700">
+          🏆 Leaderboard
+        </Link>
       </div>
     </div>
   );
