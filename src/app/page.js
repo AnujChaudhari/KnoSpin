@@ -8,6 +8,7 @@ import ProductCard from "@/components/ProductCard";
 import SearchBar from "@/components/SearchBar";
 import Newsletter from "@/components/Newsletter";
 import HeroBanner from "@/components/HeroBanner";
+import SpinWheel from "@/components/SpinWheel"; // ✅ NEW IMPORT
 import { HiFire, HiTrendingUp, HiTag } from "react-icons/hi";
 
 export default function Home() {
@@ -36,6 +37,14 @@ export default function Home() {
 
       {/* Search */}
       <SearchBar />
+
+      {/* ✅ NEW: Daily Spin Wheel Section */}
+      <section className="my-10">
+        <div className="max-w-md mx-auto">
+          <h2 className="text-2xl font-bold mb-4 text-center">🎡 Daily Spin & Win</h2>
+          <SpinWheel />
+        </div>
+      </section>
 
       {/* Categories */}
       {categories.length > 0 && (
