@@ -35,6 +35,7 @@ export default function Footer() {
               <li><Link href="/products">All Products</Link></li>
               <li><Link href="/dashboard">My Account</Link></li>
               <li><Link href="/cart">Cart</Link></li>
+              <li><Link href="/leaderboard">Leaderboard</Link></li>
             </ul>
           </div>
           <div>
