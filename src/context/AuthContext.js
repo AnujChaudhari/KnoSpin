@@ -56,10 +56,31 @@ export function AuthProvider({ children }) {
     }
   }
 
+  // ---------- ensure Firestore user document exists ----------
+  async function ensureUserDocument(currentUser) {
+    if (!currentUser) return;
+    const userDocRef = doc(db, "users", currentUser.uid);
+    const snap = await getDoc(userDocRef);
+    if (!snap.exists()) {
+      // Create brand new user document
+      await setDoc(userDocRef, {
+        email: currentUser.email,
+        referralCode: generateReferralCode(),
+        walletBalance: 0,
+        coinBalance: 0,
+        totalReferrals: 0,
+        referralEarnings: 0,
+        referralTier: "bronze",
+        createdAt: serverTimestamp(),
+      });
+    }
+  }
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
+        await ensureUserDocument(currentUser);   // ✅ FIX: auto‑create user doc
         await checkAdmin(currentUser.uid);
       } else {
         setIsAdmin(false);
