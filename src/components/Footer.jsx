@@ -40,10 +40,14 @@ export default function Footer() {
           <div>
             <h4 className="font-bold mb-3">Support</h4>
             <ul className="text-sm space-y-2">
-              <li><Link href="/contact">Contact Us</Link></li>
-              <li><Link href="/faq">FAQ</Link></li>
-              <li><Link href="/returns">Returns</Link></li>
-            </ul>
+  <li><Link href="/contact">Contact Us</Link></li>
+  <li><Link href="/faq">FAQ</Link></li>
+  <li><Link href="/returns">Returns & Refunds</Link></li>
+  <li><Link href="/shipping">Shipping Policy</Link></li>
+  <li><Link href="/privacy">Privacy Policy</Link></li>
+  <li><Link href="/terms">Terms & Conditions</Link></li>
+  <li><Link href="/about">About Us</Link></li>
+</ul>
           </div>
         </div>
         <div className="text-center text-sm text-gray-500 mt-8">
