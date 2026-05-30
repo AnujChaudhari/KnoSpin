@@ -316,7 +316,9 @@ export default function CheckoutPage() {
           {hasDigitalProduct && (
             <div className="mt-3 flex items-start gap-2 text-amber-600 dark:text-amber-400 text-sm">
               <span className="flex-shrink-0 mt-0.5">⚠️</span>
-              <span>Cash on Delivery is not available for orders containing digital products. Please choose Pay Online.</span>
+              <span>Cash on Delivery is not available for orders containing digital products. Please choose Pay Online.
+                    📢 DM me if you encounter any problems:
+                    👉 Telegram Handle: @QuickShopPro</span>
             </div>
           )}
         </div>
