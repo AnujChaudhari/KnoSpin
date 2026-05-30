@@ -19,6 +19,8 @@ import {
   getDocs,
   addDoc,
   serverTimestamp,
+  updateDoc,
+  increment,
 } from "firebase/firestore";
 import { auth, googleProvider, db } from "@/lib/firebase";
 import { toast } from "react-hot-toast";
@@ -56,21 +58,27 @@ export function AuthProvider({ children }) {
     }
   }
 
-  // ---------- ensure Firestore user document exists ----------
+  // ---------- ensure Firestore user document exists (with gamification fields) ----------
   async function ensureUserDocument(currentUser) {
     if (!currentUser) return;
     const userDocRef = doc(db, "users", currentUser.uid);
     const snap = await getDoc(userDocRef);
     if (!snap.exists()) {
-      // Create brand new user document
+      // Create brand new user document with defaults + signup bonus
       await setDoc(userDocRef, {
         email: currentUser.email,
         referralCode: generateReferralCode(),
         walletBalance: 0,
-        coinBalance: 0,
+        coinBalance: 10,            // ✅ signup bonus
         totalReferrals: 0,
         referralEarnings: 0,
         referralTier: "bronze",
+        xp: 50,                     // ✅ starting XP
+        level: 1,                   // ✅ starting level
+        achievements: [],
+        dailyStreak: 0,
+        referralStreak: 0,
+        lastLoginDate: null,
         createdAt: serverTimestamp(),
       });
     }
@@ -80,7 +88,7 @@ export function AuthProvider({ children }) {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
-        await ensureUserDocument(currentUser);   // ✅ FIX: auto‑create user doc
+        await ensureUserDocument(currentUser);   // ✅ auto‑create user doc with gamification fields
         await checkAdmin(currentUser.uid);
       } else {
         setIsAdmin(false);
@@ -90,7 +98,7 @@ export function AuthProvider({ children }) {
     return unsubscribe;
   }, []);
 
-  // ---------- SIGNUP with referral ----------
+  // ---------- SIGNUP with referral (pyramid bonus logic included) ----------
   const signup = async (email, password, referralCodeUsed = null) => {
     // 1. Firebase Auth se account banao
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -102,15 +110,21 @@ export function AuthProvider({ children }) {
     // 3. Unique referral code generate karo
     const myReferralCode = generateReferralCode();
 
-    // 4. Firestore mein user document taiyaar karo
+    // 4. Firestore mein user document taiyaar karo (with signup bonus)
     const userData = {
       email: newUser.email,
       referralCode: myReferralCode,
       walletBalance: 0,
-      coinBalance: 0,
+      coinBalance: 10,             // ✅ signup bonus coins
       totalReferrals: 0,
       referralEarnings: 0,
       referralTier: "bronze",
+      xp: 50,                      // ✅ initial XP
+      level: 1,
+      achievements: [],
+      dailyStreak: 0,
+      referralStreak: 0,
+      lastLoginDate: null,
       createdAt: serverTimestamp(),
     };
 
@@ -123,6 +137,7 @@ export function AuthProvider({ children }) {
       if (!querySnapshot.empty) {
         const referrerDoc = querySnapshot.docs[0];
         const referrerId = referrerDoc.id;
+        const referrerData = referrerDoc.data();
 
         // Record who referred this user
         userData.referredBy = referrerId;
@@ -133,11 +148,35 @@ export function AuthProvider({ children }) {
           referredId: newUser.uid,
           referralCode: referralCodeUsed,
           status: "pending",
-          rewardAmount: 20,   // ₹20 per successful referral
-          rewardCoins: 50,    // 50 coins
+          rewardAmount: 20,        // ₹20 per successful referral
+          rewardCoins: 50,        // ✅ 50 coins to referrer on delivery
+          pyramidRewardGiven: false,  // for tracking pyramid bonus
           createdAt: serverTimestamp(),
           completedAt: null,
         });
+
+        // ✅ Pyramid bonus: agar referrer khud kisi aur se referred tha,
+        // to original referrer ko 5 coins extra (one level deep)
+        if (referrerData.referredBy) {
+          const originalReferrerId = referrerData.referredBy;
+          // We'll store a second referral record or just update a field.
+          // To keep it simple, we directly award 5 coins to the original referrer now
+          // (but only after the current referral completes? User said "jab complete ho jaye".
+          // We'll handle that in order processing. For now, we just mark a pending pyramid reward.)
+          // We'll add a field to the referral doc: "pyramidReferrerId"
+          await addDoc(collection(db, "referrals"), {
+            referrerId: originalReferrerId,
+            referredId: newUser.uid,
+            referralCode: referralCodeUsed,
+            status: "pending",
+            rewardAmount: 0,
+            rewardCoins: 5,         // ✅ pyramid bonus 5 coins
+            isPyramid: true,        // distinguish pyramid reward
+            originalReferrer: referrerId,
+            createdAt: serverTimestamp(),
+            completedAt: null,
+          });
+        }
       }
     }
 
