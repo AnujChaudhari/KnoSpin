@@ -12,7 +12,22 @@ import ImageSlider from "@/components/ImageSlider";
 import ReviewSection from "@/components/ReviewSection";
 import RelatedProducts from "@/components/RelatedProducts";
 
-// SVG Stickers for different digital product types
+// ---------- Type Icons ----------
+const EarthIcon = () => (
+  <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <circle cx="12" cy="12" r="10" />
+    <ellipse cx="12" cy="12" rx="4" ry="10" />
+    <path d="M2 12h20" />
+  </svg>
+);
+
+const BagIcon = () => (
+  <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+  </svg>
+);
+
+// ---------- Existing Digital Stickers (unchanged) ----------
 const DigitalStickers = {
   pdf: (
     <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2">
@@ -99,7 +114,7 @@ const DigitalStickers = {
 
 const DigitalBadge = () => (
   <span className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full text-sm font-medium">
-    {DigitalStickers.digital}
+    <EarthIcon />
     Digital Product
   </span>
 );
@@ -228,12 +243,19 @@ export default function ProductDetailPage() {
       <div className="grid md:grid-cols-2 gap-6">
         <ImageSlider images={product.images} />
         <div className="space-y-4">
-          {/* Digital Badge */}
-          {product.isDigital && (
-            <DigitalBadge />
-          )}
-
-          <h1 className="text-3xl font-bold">{product.name}</h1>
+          {/* Type indicator next to product name */}
+          <div className="flex items-center gap-2">
+            {product.isDigital ? (
+              <span className="bg-purple-100 dark:bg-purple-900/30 text-purple-600 p-1 rounded-full" title="Digital Product">
+                <EarthIcon />
+              </span>
+            ) : (
+              <span className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 p-1 rounded-full" title="Physical Product">
+                <BagIcon />
+              </span>
+            )}
+            <h1 className="text-3xl font-bold">{product.name}</h1>
+          </div>
 
           {product.productCode && (
             <p className="text-sm text-gray-500 flex items-center gap-1">
