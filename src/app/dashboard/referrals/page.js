@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic';
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
-import { doc, getDoc, collection, query, where, getDocs, orderBy } from "firebase/firestore";
+import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { HiShare, HiTrophy, HiCurrencyRupee } from "react-icons/hi";
 
 export default function ReferralDashboard() {
@@ -35,19 +35,21 @@ export default function ReferralDashboard() {
           });
         }
 
-        // 2. Fetch referrals – सिर्फ़ तभी जब इंडेक्स मौजूद हो
+        // 2. Fetch referrals – बिना orderBy के (कोई इंडेक्स नहीं चाहिए)
         try {
           const refSnap = await getDocs(
             query(
               collection(db, "referrals"),
-              where("referrerId", "==", user.uid),
-              orderBy("createdAt", "desc")
+              where("referrerId", "==", user.uid)
             )
           );
-          setReferrals(refSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+          const list = refSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+          // क्लाइंट-साइड सॉर्ट: नए पहले
+          list.sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+          setReferrals(list);
         } catch (indexErr) {
-          console.warn("Referral query failed – index may not be ready:", indexErr);
-          setReferrals([]); // अगर इंडेक्स नहीं है तो खाली छोड़ें
+          console.warn("Referral query failed:", indexErr);
+          setReferrals([]); // खाली छोड़ें, कोई क्रैश नहीं
         }
       } catch (err) {
         console.error("Unexpected error:", err);
@@ -58,7 +60,6 @@ export default function ReferralDashboard() {
     fetchData();
   }, [user]);
 
-  // यदि लॉगिन नहीं है
   if (!user) {
     return (
       <div className="text-center py-20">
@@ -68,7 +69,6 @@ export default function ReferralDashboard() {
     );
   }
 
-  // लोडिंग स्पिनर
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-[50vh]">
@@ -77,7 +77,6 @@ export default function ReferralDashboard() {
     );
   }
 
-  // सुरक्षित मान
   const referralCode = profile?.referralCode || "N/A";
   const totalReferrals = profile?.totalReferrals || 0;
   const referralEarnings = profile?.referralEarnings || 0;
@@ -90,7 +89,6 @@ export default function ReferralDashboard() {
     <div className="max-w-2xl mx-auto p-4">
       <h1 className="text-3xl font-bold mb-6">Referral Program</h1>
 
-      {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <div className="card text-center">
           <HiTrophy className="mx-auto text-2xl text-yellow-500" />
@@ -112,7 +110,6 @@ export default function ReferralDashboard() {
         </div>
       </div>
 
-      {/* Referral Code & Share */}
       <div className="card mb-8">
         <h3 className="font-bold text-lg mb-2">Your Referral Code</h3>
         <div className="flex items-center justify-between bg-gray-100 dark:bg-gray-700 p-4 rounded-xl">
@@ -142,7 +139,6 @@ export default function ReferralDashboard() {
         </div>
       </div>
 
-      {/* Referral History */}
       <div>
         <h3 className="font-bold text-lg mb-4">Referral History</h3>
         {referrals.length === 0 && (
