@@ -38,6 +38,18 @@ const LeaderboardIcon = () => (
   </svg>
 );
 
+// 🏆 New Trophy Icon for Achievements
+const TrophyIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" className="w-7 h-7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M6 9H4a2 2 0 01-2-2V5a2 2 0 012-2h2" />
+    <path d="M18 9h2a2 2 0 002-2V5a2 2 0 00-2-2h-2" />
+    <path d="M6 21h12" />
+    <path d="M12 17V5" />
+    <path d="M8 21h8" />
+    <path d="M12 13a4 4 0 100-8 4 4 0 000 8z" />
+  </svg>
+);
+
 export default function DashboardPage() {
   const { user } = useAuth();
   const [profile, setProfile] = useState(null);
@@ -75,6 +87,7 @@ export default function DashboardPage() {
     { href: "/dashboard/referrals", label: "Refer & Earn", icon: <ReferralIcon />, desc: "Invite friends, earn coins & cash", color: "from-orange-500 to-red-500", bgLight: "bg-orange-50 dark:bg-orange-900/20", textColor: "text-orange-600 dark:text-orange-400" },
     { href: "/dashboard/wallet", label: "My Wallet", icon: <WalletIcon />, desc: "Balance, coins & transactions", color: "from-green-500 to-emerald-500", bgLight: "bg-green-50 dark:bg-green-900/20", textColor: "text-green-600 dark:text-green-400" },
     { href: "/leaderboard", label: "Leaderboard", icon: <LeaderboardIcon />, desc: "Top referrers & rankings", color: "from-yellow-500 to-amber-500", bgLight: "bg-yellow-50 dark:bg-yellow-900/20", textColor: "text-yellow-600 dark:text-yellow-400" },
+    { href: "/dashboard/achievements", label: "Achievements", icon: <TrophyIcon />, desc: "Your unlocked badges & rewards", color: "from-rose-500 to-pink-500", bgLight: "bg-rose-50 dark:bg-rose-900/20", textColor: "text-rose-600 dark:text-rose-400" }
   ];
 
   return (
