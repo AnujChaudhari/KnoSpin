@@ -12,129 +12,47 @@ import { sendOrderConfirmation } from "@/lib/emailjs";
 import { sendOrderConfirmationViaResend } from "@/lib/resend";
 import { toast } from "react-hot-toast";
 
-// 🎨 Premium SVG Email Template Generator
-const generateOrderEmailHTML = (orderData) => {
-  const { items, orderId, total, address, email } = orderData;
-  
-  // Separate digital and physical items
-  const digitalItems = items.filter(item => item.isDigital);
-  const physicalItems = items.filter(item => !item.isDigital);
+/* ───────── प्रीमियम SVG आइकॉन ───────── */
+const LocationPinIcon = () => (
+  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.828 0l-4.243-4.243a8 8 0 1111.314 0z" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+  </svg>
+);
 
-  // Generate items rows
-  const itemsRows = items.map(item => `
-    <tr style="border-bottom:1px solid #e5e7eb">
-      <td style="padding:12px 8px;vertical-align:top">
-        <p style="margin:0;font-weight:600;color:#111827">${item.name}</p>
-        <p style="margin:4px 0 0;font-size:13px;color:#6b7280">Qty: ${item.quantity}</p>
-      </td>
-      <td style="padding:12px 8px;text-align:right;font-weight:600;color:#111827">₹${(item.price * item.quantity).toFixed(2)}</td>
-    </tr>
-  `).join('');
+const CoinIcon = () => (
+  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <circle cx="12" cy="12" r="9" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6l3 2" />
+  </svg>
+);
 
-  // Digital items section with download links
-  const digitalSection = digitalItems.length > 0 ? `
-    <div style="background:linear-gradient(135deg,#667eea,#764ba2);border-radius:16px;padding:24px;margin:24px 0;color:white">
-      <h3 style="margin:0 0 16px;font-size:20px">📥 Your Digital Downloads</h3>
-      ${digitalItems.map(item => `
-        <div style="background:rgba(255,255,255,0.15);border-radius:12px;padding:16px;margin-bottom:12px">
-          <p style="margin:0 0 8px;font-weight:600;font-size:16px">${item.name}</p>
-          <a href="${item.digitalFileUrl || '#'}" 
-             style="display:inline-block;background:white;color:#667eea;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px">
-             ⬇ Download Now
-          </a>
-          <p style="margin:8px 0 0;font-size:12px;opacity:0.8">Downloads: ${item.downloadLimit || 5} available • Link expires in 7 days</p>
-        </div>
-      `).join('')}
-    </div>
-  ` : '';
+const WalletIcon = () => (
+  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <rect x="2" y="5" width="20" height="14" rx="2" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M16 10h4" />
+  </svg>
+);
 
-  // Physical items note
-  const physicalNote = physicalItems.length > 0 ? `
-    <div style="background:#fef3c7;border-radius:12px;padding:16px;margin:24px 0">
-      <p style="margin:0;color:#92400e;font-size:14px">📦 Your physical items will be shipped soon. Track your order in your dashboard.</p>
-    </div>
-  ` : '';
+const CashIcon = () => (
+  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
+  </svg>
+);
 
-  return `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Order Confirmed! #${orderId}</title>
-</head>
-<body style="margin:0;padding:0;background-color:#f3f4f6;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif">
-  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:30px auto;background:white;border-radius:20px;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,0.08)">
-    <!-- 🎉 Header -->
-    <tr>
-      <td style="background:linear-gradient(135deg,#2563eb,#7c3aed);padding:40px 30px;text-align:center">
-        <svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-bottom:16px">
-          <circle cx="40" cy="40" r="38" stroke="white" stroke-width="3" fill="none"/>
-          <path d="M25 42L35 52L55 30" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        <h1 style="margin:0;color:white;font-size:28px;font-weight:700">Order Confirmed! 🎉</h1>
-        <p style="margin:8px 0 0;color:rgba(255,255,255,0.9);font-size:16px">Thank you for shopping with Quick Shop</p>
-      </td>
-    </tr>
-    
-    <!-- 📋 Content -->
-    <tr>
-      <td style="padding:30px">
-        <!-- Order ID & Greeting -->
-        <div style="margin-bottom:24px">
-          <p style="margin:0;font-size:14px;color:#6b7280">Order ID: <strong style="color:#111827">#${orderId.slice(0,8)}</strong></p>
-          <p style="margin:12px 0 0;font-size:16px;color:#111827">Hi <strong>${orderData.to_name || 'Customer'}</strong>,</p>
-          <p style="margin:8px 0 0;font-size:15px;color:#4b5563">Great news! Your order has been placed successfully.</p>
-        </div>
+const CardIcon = () => (
+  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <rect x="2" y="5" width="20" height="14" rx="2" />
+    <line strokeLinecap="round" x1="2" y1="10" x2="22" y2="10" />
+  </svg>
+);
 
-        ${digitalSection}
-        
-        <!-- 📦 Items Table -->
-        <h3 style="margin:0 0 12px;font-size:18px;color:#111827">📦 Order Summary</h3>
-        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px">
-          ${itemsRows}
-          <tr>
-            <td style="padding:16px 8px 0;font-weight:700;font-size:18px;color:#111827">Total</td>
-            <td style="padding:16px 8px 0;text-align:right;font-weight:700;font-size:18px;color:#2563eb">₹${total.toFixed(2)}</td>
-          </tr>
-        </table>
-
-        ${physicalNote}
-
-        <!-- 📍 Shipping Address -->
-        <div style="background:#f9fafb;border-radius:12px;padding:16px;margin-bottom:24px">
-          <p style="margin:0 0 8px;font-weight:600;color:#111827">📍 Shipping Address</p>
-          <p style="margin:0;font-size:14px;color:#374151">${orderData.address_name || address?.name}</p>
-          <p style="margin:4px 0 0;font-size:14px;color:#374151">${orderData.address_phone || address?.phone}</p>
-          <p style="margin:4px 0 0;font-size:14px;color:#374151">${orderData.address_street || address?.street}, ${orderData.address_city || address?.city} – ${orderData.address_pincode || address?.pincode}</p>
-        </div>
-
-        <!-- 🔗 CTA Button -->
-        <a href="https://quickshoppro.vercel.app/dashboard/orders" 
-           style="display:block;text-align:center;background:linear-gradient(135deg,#2563eb,#7c3aed);color:white;text-decoration:none;padding:14px 24px;border-radius:12px;font-weight:600;font-size:16px;margin-bottom:24px">
-           📋 Track Your Order
-        </a>
-
-        <!-- 📱 WhatsApp -->
-        <div style="text-align:center;margin-bottom:24px">
-          <a href="https://wa.me/91${orderData.address_phone || address?.phone}?text=Order%20${orderId.slice(0,8)}%20confirmed!%20Total:%20₹${total.toFixed(2)}" 
-             style="color:#25d366;text-decoration:none;font-size:14px;font-weight:500">
-             💬 Share on WhatsApp
-          </a>
-        </div>
-
-        <!-- 📞 Support -->
-        <div style="border-top:1px solid #e5e7eb;padding-top:20px;text-align:center">
-          <p style="margin:0;font-size:13px;color:#9ca3af">Need help? Contact us at <a href="mailto:support@quickshop.com" style="color:#2563eb">support@quickshop.com</a></p>
-          <p style="margin:4px 0 0;font-size:12px;color:#9ca3af">© 2026 Quick Shop. All rights reserved.</p>
-        </div>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-  `;
-};
+const ShieldCheckIcon = () => (
+  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4" />
+  </svg>
+);
 
 // --- Main Component ---
 export default function CheckoutPage() {
@@ -143,7 +61,7 @@ export default function CheckoutPage() {
   const router = useRouter();
   const [address, setAddress] = useState({ name: "", phone: "", street: "", city: "", pincode: "" });
   const [paymentMethod, setPaymentMethod] = useState("cod");
-  const [couponDiscount, setCouponDiscount] = useState(0);
+  const [couponDiscount] = useState(0); // future integration
   const [userProfile, setUserProfile] = useState(null);
   const [useCoins, setUseCoins] = useState(false);
   const [coinsToUse, setCoinsToUse] = useState(0);
@@ -157,12 +75,24 @@ export default function CheckoutPage() {
     fetchProfile();
   }, [user]);
 
+  // Determine cart composition
+  const hasDigitalProduct = cart.some(item => item.isDigital);
+  const allDigital = cart.every(item => item.isDigital);
+
+  // Coin logic: only allowed when ALL items are digital
+  const coinsAllowed = allDigital && userProfile?.coinBalance > 0;
   const coinDiscount = useCoins ? Math.min(coinsToUse, userProfile?.coinBalance || 0) : 0;
   const finalTotal = Math.max(0, cartTotal - couponDiscount - coinDiscount);
 
   const handlePlaceOrder = async () => {
     if (!user) return toast.error("Please login first");
     if (!address.name || !address.phone) return toast.error("Fill all address fields");
+
+    // For digital only orders, force online payment
+    if (allDigital && paymentMethod !== "razorpay") {
+      toast.error("Digital products require online payment. Please select Pay Online.");
+      return;
+    }
 
     const orderData = {
       userId: user.uid,
@@ -179,7 +109,7 @@ export default function CheckoutPage() {
       trackingUrl: '',
     };
 
-    // Coins deduction
+    // Coins deduction (only if used)
     if (useCoins && coinDiscount > 0) {
       await updateDoc(doc(db, "users", user.uid), {
         coinBalance: increment(-coinDiscount),
@@ -195,7 +125,7 @@ export default function CheckoutPage() {
       });
     }
 
-    // 📧 Email parameters (used for both COD & Razorpay)
+    // Email parameters
     const emailParams = {
       ...orderData,
       orderId: "",
@@ -239,7 +169,7 @@ export default function CheckoutPage() {
               paymentStatus: "paid",
             });
 
-            // Update coin transaction
+            // Update coin transaction with order ID
             if (useCoins && coinDiscount > 0) {
               const txSnap = await getDocs(query(collection(db, "wallet_transactions"),
                 where("userId", "==", user.uid), where("orderId", "==", ""), orderBy("createdAt", "desc"), limit(1)));
@@ -248,12 +178,12 @@ export default function CheckoutPage() {
               }
             }
 
-            // 📧 Send emails
+            // Send emails
             emailParams.orderId = docRef.id;
-            const emailHTML = generateOrderEmailHTML(emailParams);
-            
-            sendOrderConfirmation({ ...emailParams, items: cart.map(i => ({...i, subtotal: (i.price*i.quantity).toFixed(2)})) }).catch(err => console.error("EmailJS:", err));
-            sendOrderConfirmationViaResend({ ...emailParams, html: emailHTML }).catch(err => console.error("Resend:", err));
+            sendOrderConfirmation({ ...emailParams, items: cart.map(i => ({...i, subtotal: (i.price*i.quantity).toFixed(2)})) })
+              .catch(err => console.error("EmailJS:", err));
+            sendOrderConfirmationViaResend(emailParams)
+              .catch(err => console.error("Resend:", err));
 
             clearCart();
             toast.success("Order placed!");
@@ -267,7 +197,7 @@ export default function CheckoutPage() {
       const rzp = new window.Razorpay(options);
       rzp.open();
     } else {
-      // COD
+      // COD (only possible when no digital items)
       const docRef = await addDoc(collection(db, "orders"), {
         ...orderData,
         paymentStatus: "pending",
@@ -281,12 +211,11 @@ export default function CheckoutPage() {
         }
       }
 
-      // 📧 Send emails
       emailParams.orderId = docRef.id;
-      const emailHTML = generateOrderEmailHTML(emailParams);
-      
-      sendOrderConfirmation({ ...emailParams, items: cart.map(i => ({...i, subtotal: (i.price*i.quantity).toFixed(2)})) }).catch(err => console.error("EmailJS:", err));
-      sendOrderConfirmationViaResend({ ...emailParams, html: emailHTML }).catch(err => console.error("Resend:", err));
+      sendOrderConfirmation({ ...emailParams, items: cart.map(i => ({...i, subtotal: (i.price*i.quantity).toFixed(2)})) })
+        .catch(err => console.error("EmailJS:", err));
+      sendOrderConfirmationViaResend(emailParams)
+        .catch(err => console.error("Resend:", err));
 
       clearCart();
       toast.success("Order placed with Cash on Delivery");
@@ -296,10 +225,17 @@ export default function CheckoutPage() {
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">Checkout</h1>
+      <h1 className="text-3xl font-bold mb-8 flex items-center gap-3">
+        <ShieldCheckIcon />
+        Secure Checkout
+      </h1>
+
       <div className="space-y-6">
+        {/* Shipping Address */}
         <div className="card">
-          <h2 className="font-semibold mb-4">Shipping Address</h2>
+          <h2 className="font-semibold mb-4 flex items-center gap-2">
+            <LocationPinIcon /> Shipping Address
+          </h2>
           <input placeholder="Full Name" value={address.name} onChange={e => setAddress({...address, name: e.target.value})} className="input-field" />
           <input placeholder="Phone" value={address.phone} onChange={e => setAddress({...address, phone: e.target.value})} className="input-field" />
           <input placeholder="Street" value={address.street} onChange={e => setAddress({...address, street: e.target.value})} className="input-field" />
@@ -309,34 +245,97 @@ export default function CheckoutPage() {
           </div>
         </div>
 
-        {userProfile && userProfile.coinBalance > 0 && (
+        {/* Coins Redemption – only for all‑digital orders */}
+        {coinsAllowed && (
           <div className="card">
-            <h2 className="font-semibold mb-3">💎 Use Coins</h2>
-            <p className="text-sm mb-2">Available: <strong>{userProfile.coinBalance}</strong> coins (1 coin = ₹1 discount)</p>
+            <h2 className="font-semibold mb-3 flex items-center gap-2">
+              <CoinIcon /> Use Coins
+            </h2>
+            <p className="text-sm mb-2">
+              Available: <strong>{userProfile.coinBalance}</strong> coins (1 coin = ₹1 discount)
+            </p>
             <label className="flex items-center gap-2">
-              <input type="checkbox" checked={useCoins} onChange={(e) => { setUseCoins(e.target.checked); if (!e.target.checked) setCoinsToUse(0); }} />
+              <input
+                type="checkbox"
+                checked={useCoins}
+                onChange={(e) => {
+                  setUseCoins(e.target.checked);
+                  if (!e.target.checked) setCoinsToUse(0);
+                }}
+              />
               Use coins for discount
             </label>
             {useCoins && (
-              <input type="number" min={1} max={userProfile.coinBalance} value={coinsToUse} onChange={(e) => setCoinsToUse(Math.min(Number(e.target.value), userProfile.coinBalance))} placeholder="Enter coins to use" className="input-field mt-2" />
+              <input
+                type="number"
+                min={1}
+                max={userProfile.coinBalance}
+                value={coinsToUse}
+                onChange={(e) => setCoinsToUse(Math.min(Number(e.target.value), userProfile.coinBalance))}
+                placeholder="Enter coins to use"
+                className="input-field mt-2"
+              />
             )}
-            {coinDiscount > 0 && <p className="text-green-600 text-sm mt-1">You save ₹{coinDiscount} with coins!</p>}
+            {coinDiscount > 0 && (
+              <p className="text-green-600 text-sm mt-2 flex items-center gap-1">
+                <WalletIcon /> You save ₹{coinDiscount} with coins!
+              </p>
+            )}
           </div>
         )}
 
+        {/* Payment Method */}
         <div className="card">
-          <h2 className="font-semibold mb-4">Payment Method</h2>
+          <h2 className="font-semibold mb-4 flex items-center gap-2">
+            <CardIcon /> Payment Method
+          </h2>
           <div className="flex gap-4">
-            <button onClick={() => setPaymentMethod("cod")} className={`py-2 px-4 rounded-lg border ${paymentMethod==='cod'?'bg-primary-600 text-white border-primary-600':'border-gray-300'}`}>Cash on Delivery</button>
-            <button onClick={() => setPaymentMethod("razorpay")} className={`py-2 px-4 rounded-lg border ${paymentMethod==='razorpay'?'bg-primary-600 text-white border-primary-600':'border-gray-300'}`}>Pay Online</button>
+            {!hasDigitalProduct && (
+              <button
+                onClick={() => setPaymentMethod("cod")}
+                className={`py-3 px-5 rounded-xl border flex items-center gap-2 transition ${
+                  paymentMethod === "cod"
+                    ? "bg-primary-600 text-white border-primary-600 shadow-lg"
+                    : "border-gray-300 hover:border-gray-400 dark:border-gray-600"
+                }`}
+              >
+                <CashIcon /> Cash on Delivery
+              </button>
+            )}
+            <button
+              onClick={() => setPaymentMethod("razorpay")}
+              className={`py-3 px-5 rounded-xl border flex items-center gap-2 transition ${
+                paymentMethod === "razorpay"
+                  ? "bg-primary-600 text-white border-primary-600 shadow-lg"
+                  : "border-gray-300 hover:border-gray-400 dark:border-gray-600"
+              }`}
+            >
+              <WalletIcon /> Pay Online
+            </button>
           </div>
+          {hasDigitalProduct && (
+            <div className="mt-3 flex items-start gap-2 text-amber-600 dark:text-amber-400 text-sm">
+              <span className="flex-shrink-0 mt-0.5">⚠️</span>
+              <span>Cash on Delivery is not available for orders containing digital products. Please choose Pay Online.</span>
+            </div>
+          )}
         </div>
-        <div className="card text-lg font-bold flex justify-between items-center">
-          <div>
-            {coinDiscount > 0 && <p className="text-sm text-green-600">Coin Discount: -₹{coinDiscount}</p>}
-            <span>Total: ₹{finalTotal}</span>
+
+        {/* Total & Place Order */}
+        <div className="card">
+          <div className="flex justify-between items-center text-lg font-bold">
+            <div>
+              {coinDiscount > 0 && (
+                <p className="text-sm text-green-600 flex items-center gap-1">
+                  <CoinIcon /> Coin Discount: -₹{coinDiscount}
+                </p>
+              )}
+              <span>Total: ₹{finalTotal}</span>
+            </div>
+            <button onClick={handlePlaceOrder} className="btn-gradient px-6 py-3">
+              Place Order
+            </button>
           </div>
-          <button onClick={handlePlaceOrder} className="btn-gradient">Place Order</button>
         </div>
       </div>
     </div>
