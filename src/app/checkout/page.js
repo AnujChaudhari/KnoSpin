@@ -10,6 +10,7 @@ import { db } from "@/lib/firebase";
 import { loadRazorpay } from "@/lib/razorpay";
 import { sendOrderConfirmation } from "@/lib/emailjs";
 import { sendOrderConfirmationViaResend } from "@/lib/resend";
+import { sendNotification } from "@/lib/notifications";
 import { toast } from "react-hot-toast";
 
 /* ───────── प्रीमियम SVG आइकॉन ───────── */
@@ -185,6 +186,15 @@ export default function CheckoutPage() {
             sendOrderConfirmationViaResend(emailParams)
               .catch(err => console.error("Resend:", err));
 
+            // ✅ Send notification
+            sendNotification(
+              user.uid,
+              "order",
+              "Order Placed Successfully",
+              `Your order #${docRef.id} has been placed. Total: ₹${finalTotal}`,
+              "/dashboard/orders"
+            );
+
             clearCart();
             toast.success("Order placed!");
             router.push(`/order-confirmation?id=${docRef.id}`);
@@ -216,6 +226,15 @@ export default function CheckoutPage() {
         .catch(err => console.error("EmailJS:", err));
       sendOrderConfirmationViaResend(emailParams)
         .catch(err => console.error("Resend:", err));
+
+      // ✅ Send notification
+      sendNotification(
+        user.uid,
+        "order",
+        "Order Placed Successfully",
+        `Your COD order #${docRef.id} has been placed. Total: ₹${finalTotal}`,
+        "/dashboard/orders"
+      );
 
       clearCart();
       toast.success("Order placed with Cash on Delivery");
