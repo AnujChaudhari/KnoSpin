@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
-import { collection, addDoc, query, where, getDocs, orderBy, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, query, where, getDocs, serverTimestamp } from "firebase/firestore";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "react-hot-toast";
 import { HiStar } from "react-icons/hi";
@@ -19,11 +19,15 @@ export default function ReviewSection({ productId }) {
     if (!productId) return;
     const fetchReviews = async () => {
       try {
-        const q = query(collection(db, "reviews"), where("productId", "==", productId), orderBy("createdAt", "desc"));
+        // बिना orderBy के क्वेरी (इंडेक्स नहीं चाहिए)
+        const q = query(collection(db, "reviews"), where("productId", "==", productId));
         const snap = await getDocs(q);
-        setReviews(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        // क्लाइंट-साइड सॉर्ट (नए पहले)
+        list.sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+        setReviews(list);
       } catch (err) {
-        console.warn("Review fetch failed (index may be building):", err);
+        console.warn("Review fetch failed:", err);
         setFetchError(true);
       }
     };
@@ -51,11 +55,13 @@ export default function ReviewSection({ productId }) {
       setComment("");
       setRating(5);
       toast.success("Review submitted!");
-      // Re‑fetch reviews safely
+      // तुरंत रिफ्रेश (बिना orderBy)
       try {
-        const q = query(collection(db, "reviews"), where("productId", "==", productId), orderBy("createdAt", "desc"));
+        const q = query(collection(db, "reviews"), where("productId", "==", productId));
         const snap = await getDocs(q);
-        setReviews(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        list.sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+        setReviews(list);
       } catch (err) {
         console.warn("Could not refresh reviews:", err);
       }
