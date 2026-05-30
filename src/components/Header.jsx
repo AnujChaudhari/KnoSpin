@@ -5,6 +5,7 @@ import { useCart } from "@/context/CartContext";
 import Link from "next/link";
 import { HiMenu, HiX, HiShoppingCart, HiUser, HiLogout } from "react-icons/hi";
 import ThemeToggle from "./ThemeToggle";
+import NotificationBell from "./NotificationBell"; // ✅ NEW
 
 export default function Header() {
   const { user, logout, isAdmin, loading } = useAuth();
@@ -12,12 +13,10 @@ export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
-  // Fix hydration issue – component ko client-side mount hone do
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Loading state mein kuch mat dikhao ya skeleton dikhao
   if (!mounted || loading) {
     return (
       <header className="glassmorphism sticky top-0 z-50 border-b border-gray-200 dark:border-gray-700">
@@ -40,6 +39,8 @@ export default function Header() {
 
         <div className="flex items-center gap-4">
           <ThemeToggle />
+          {/* ✅ Notification Bell */}
+          <NotificationBell />
           <Link href="/cart" className="relative">
             <HiShoppingCart className="w-6 h-6" />
             {cart.length > 0 && (
