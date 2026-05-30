@@ -13,13 +13,19 @@ export default function ReviewSection({ productId }) {
   const [comment, setComment] = useState("");
   const [loading, setLoading] = useState(false);
   const [hoverRating, setHoverRating] = useState(0);
+  const [fetchError, setFetchError] = useState(false);
 
   useEffect(() => {
     if (!productId) return;
     const fetchReviews = async () => {
-      const q = query(collection(db, "reviews"), where("productId", "==", productId), orderBy("createdAt", "desc"));
-      const snap = await getDocs(q);
-      setReviews(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      try {
+        const q = query(collection(db, "reviews"), where("productId", "==", productId), orderBy("createdAt", "desc"));
+        const snap = await getDocs(q);
+        setReviews(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      } catch (err) {
+        console.warn("Review fetch failed (index may be building):", err);
+        setFetchError(true);
+      }
     };
     fetchReviews();
   }, [productId]);
@@ -45,9 +51,14 @@ export default function ReviewSection({ productId }) {
       setComment("");
       setRating(5);
       toast.success("Review submitted!");
-      const q = query(collection(db, "reviews"), where("productId", "==", productId), orderBy("createdAt", "desc"));
-      const snap = await getDocs(q);
-      setReviews(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      // Re‑fetch reviews safely
+      try {
+        const q = query(collection(db, "reviews"), where("productId", "==", productId), orderBy("createdAt", "desc"));
+        const snap = await getDocs(q);
+        setReviews(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      } catch (err) {
+        console.warn("Could not refresh reviews:", err);
+      }
     } catch (err) { toast.error("Failed to submit review"); }
     setLoading(false);
   };
@@ -65,7 +76,9 @@ export default function ReviewSection({ productId }) {
               <HiStar key={i} className={i <= Math.round(Number(avgRating)) ? "text-yellow-500" : "text-gray-300"} />
             ))}
           </div>
-          <p className="text-sm text-gray-500">{reviews.length} reviews</p>
+          <p className="text-sm text-gray-500">
+            {fetchError ? "Unable to load reviews" : `${reviews.length} reviews`}
+          </p>
         </div>
       </div>
 
@@ -105,7 +118,9 @@ export default function ReviewSection({ productId }) {
 
       {/* Reviews List */}
       <div className="space-y-4">
-        {reviews.length === 0 && !user && <p className="text-gray-500">No reviews yet. Login to write one!</p>}
+        {reviews.length === 0 && !fetchError && !user && (
+          <p className="text-gray-500">No reviews yet. Login to write one!</p>
+        )}
         {reviews.map(review => (
           <div key={review.id} className="border-b pb-4 last:border-0">
             <div className="flex justify-between items-start mb-2">
