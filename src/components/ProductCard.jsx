@@ -5,6 +5,20 @@ import { useCart } from "@/context/CartContext";
 import { useState } from "react";
 
 /* ───────── प्रीमियम SVG आइकॉन ───────── */
+const EarthIcon = () => (
+  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <circle cx="12" cy="12" r="10" />
+    <ellipse cx="12" cy="12" rx="4" ry="10" />
+    <path d="M2 12h20" />
+  </svg>
+);
+
+const BagIcon = () => (
+  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+  </svg>
+);
+
 const HeartIcon = ({ filled }) => (
   <svg className="w-5 h-5" viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
     <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
@@ -46,7 +60,7 @@ export default function ProductCard({ product }) {
   const { addToCart } = useCart();
   const [wishlist, setWishlist] = useState(false);
 
-  // Digital category icon mapping
+  // Digital sub‑category icon
   const getDigitalIcon = (category) => {
     switch (category) {
       case "pdf": return <DocumentIcon />;
@@ -57,7 +71,20 @@ export default function ProductCard({ product }) {
   };
 
   return (
-    <motion.div whileHover={{ y: -5 }} className="card group">
+    <motion.div whileHover={{ y: -5 }} className="card group relative">
+      {/* ── टाइप आइकन (ऊपर‑दाएँ) ── */}
+      <div className="absolute top-2 right-2 z-10">
+        {product.isDigital ? (
+          <span className="bg-purple-500 text-white p-1.5 rounded-full flex items-center justify-center shadow-md" title="Digital Product">
+            <EarthIcon />
+          </span>
+        ) : (
+          <span className="bg-emerald-500 text-white p-1.5 rounded-full flex items-center justify-center shadow-md" title="Physical Product">
+            <BagIcon />
+          </span>
+        )}
+      </div>
+
       <Link href={`/product/${product.id}`}>
         <div className="relative w-full h-40 rounded-xl overflow-hidden mb-3 bg-gray-100 dark:bg-gray-700">
           <img
@@ -75,7 +102,7 @@ export default function ProductCard({ product }) {
             </span>
           )}
 
-          {/* Digital Badge */}
+          {/* Digital Text Badge (अगर है तो) */}
           {product.isDigital && (
             <span className={`absolute top-2 ${product.onSale ? 'left-16' : 'left-2'} bg-purple-500 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1`}>
               {getDigitalIcon(product.digitalCategory)}
