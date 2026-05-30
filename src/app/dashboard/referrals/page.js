@@ -10,11 +10,7 @@ import { HiShare, HiTrophy, HiCurrencyRupee } from "react-icons/hi";
 export default function ReferralDashboard() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [referralCode, setReferralCode] = useState("");
-  const [totalReferrals, setTotalReferrals] = useState(0);
-  const [referralEarnings, setReferralEarnings] = useState(0);
-  const [coinBalance, setCoinBalance] = useState(0);
-  const [referralTier, setReferralTier] = useState("bronze");
+  const [profile, setProfile] = useState(null);
   const [referrals, setReferrals] = useState([]);
 
   useEffect(() => {
@@ -25,28 +21,36 @@ export default function ReferralDashboard() {
 
     const fetchData = async () => {
       try {
-        // Fetch user profile
+        // 1. Fetch user profile
         const userSnap = await getDoc(doc(db, "users", user.uid));
         if (userSnap.exists()) {
-          const data = userSnap.data();
-          setReferralCode(data.referralCode || "N/A");
-          setTotalReferrals(data.totalReferrals || 0);
-          setReferralEarnings(data.referralEarnings || 0);
-          setCoinBalance(data.coinBalance || 0);
-          setReferralTier(data.referralTier || "bronze");
+          setProfile(userSnap.data());
+        } else {
+          setProfile({
+            referralCode: "N/A",
+            totalReferrals: 0,
+            referralEarnings: 0,
+            coinBalance: 0,
+            referralTier: "bronze",
+          });
         }
 
-        // Fetch referrals
-        const refSnap = await getDocs(
-          query(
-            collection(db, "referrals"),
-            where("referrerId", "==", user.uid),
-            orderBy("createdAt", "desc")
-          )
-        );
-        setReferrals(refSnap.docs.map(d => ({ id: d.id, ...d.data() })));
-      } catch (error) {
-        console.error("Error fetching referrals:", error);
+        // 2. Fetch referrals – सिर्फ़ तभी जब इंडेक्स मौजूद हो
+        try {
+          const refSnap = await getDocs(
+            query(
+              collection(db, "referrals"),
+              where("referrerId", "==", user.uid),
+              orderBy("createdAt", "desc")
+            )
+          );
+          setReferrals(refSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+        } catch (indexErr) {
+          console.warn("Referral query failed – index may not be ready:", indexErr);
+          setReferrals([]); // अगर इंडेक्स नहीं है तो खाली छोड़ें
+        }
+      } catch (err) {
+        console.error("Unexpected error:", err);
       }
       setLoading(false);
     };
@@ -54,6 +58,7 @@ export default function ReferralDashboard() {
     fetchData();
   }, [user]);
 
+  // यदि लॉगिन नहीं है
   if (!user) {
     return (
       <div className="text-center py-20">
@@ -63,24 +68,23 @@ export default function ReferralDashboard() {
     );
   }
 
+  // लोडिंग स्पिनर
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-[50vh]">
-        <div className="text-center">
-          <div className="animate-spin w-10 h-10 border-4 border-primary-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-gray-500">Loading...</p>
-        </div>
+        <div className="animate-spin w-10 h-10 border-4 border-primary-500 border-t-transparent rounded-full"></div>
       </div>
     );
   }
 
-  const shareText = `Join Quick Shop using my referral code ${referralCode} and get rewards! Sign up here: https://quickshoppro.vercel.app/signup?ref=${referralCode}`;
+  // सुरक्षित मान
+  const referralCode = profile?.referralCode || "N/A";
+  const totalReferrals = profile?.totalReferrals || 0;
+  const referralEarnings = profile?.referralEarnings || 0;
+  const coinBalance = profile?.coinBalance || 0;
+  const referralTier = profile?.referralTier || "bronze";
 
-  const getTierColor = (tier) => {
-    if (tier === "gold") return "text-yellow-500";
-    if (tier === "silver") return "text-gray-400";
-    return "text-orange-600";
-  };
+  const shareText = `Join Quick Shop using my referral code ${referralCode} and get rewards! Sign up here: https://quickshoppro.vercel.app/signup?ref=${referralCode}`;
 
   return (
     <div className="max-w-2xl mx-auto p-4">
@@ -89,23 +93,21 @@ export default function ReferralDashboard() {
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <div className="card text-center">
-          <HiTrophy className={`mx-auto text-2xl ${getTierColor(referralTier)}`} />
-          <p className={`text-xl font-bold ${getTierColor(referralTier)}`}>
-            {referralTier?.toUpperCase() || "BRONZE"}
-          </p>
+          <HiTrophy className="mx-auto text-2xl text-yellow-500" />
+          <p className="text-xl font-bold uppercase">{referralTier}</p>
           <p className="text-xs text-gray-500">Tier</p>
         </div>
         <div className="card text-center">
-          <p className="text-2xl font-bold">{totalReferrals || 0}</p>
+          <p className="text-2xl font-bold">{totalReferrals}</p>
           <p className="text-xs text-gray-500">Referrals</p>
         </div>
         <div className="card text-center">
           <HiCurrencyRupee className="mx-auto text-green-500 text-2xl" />
-          <p className="text-xl font-bold">₹{referralEarnings || 0}</p>
+          <p className="text-xl font-bold">₹{referralEarnings}</p>
           <p className="text-xs text-gray-500">Earned</p>
         </div>
         <div className="card text-center">
-          <p className="text-2xl font-bold">{coinBalance || 0}</p>
+          <p className="text-2xl font-bold">{coinBalance}</p>
           <p className="text-xs text-gray-500">Coins</p>
         </div>
       </div>
@@ -114,16 +116,9 @@ export default function ReferralDashboard() {
       <div className="card mb-8">
         <h3 className="font-bold text-lg mb-2">Your Referral Code</h3>
         <div className="flex items-center justify-between bg-gray-100 dark:bg-gray-700 p-4 rounded-xl">
-          <span className="text-2xl font-mono font-bold tracking-widest">
-            {referralCode || "N/A"}
-          </span>
+          <span className="text-2xl font-mono font-bold tracking-widest">{referralCode}</span>
           <button
-            onClick={() => {
-              if (referralCode && referralCode !== "N/A") {
-                navigator.clipboard.writeText(referralCode);
-                alert("Copied!");
-              }
-            }}
+            onClick={() => { navigator.clipboard.writeText(referralCode); alert("Copied!"); }}
             className="btn-gradient text-sm"
           >
             Copy
@@ -133,7 +128,6 @@ export default function ReferralDashboard() {
           <a
             href={`https://wa.me/?text=${encodeURIComponent(shareText)}`}
             target="_blank"
-            rel="noreferrer"
             className="flex-1 bg-green-500 text-white text-center py-2 rounded-lg text-sm"
           >
             📱 WhatsApp
@@ -141,7 +135,6 @@ export default function ReferralDashboard() {
           <a
             href={`https://t.me/share/url?url=https://quickshoppro.vercel.app/signup?ref=${referralCode}&text=${encodeURIComponent(shareText)}`}
             target="_blank"
-            rel="noreferrer"
             className="flex-1 bg-blue-500 text-white text-center py-2 rounded-lg text-sm"
           >
             ✈️ Telegram
@@ -173,15 +166,9 @@ export default function ReferralDashboard() {
                   </span>
                 </p>
               </div>
-              {ref.status === "completed" && (
-                <span className="text-green-600 font-bold">+₹{ref.rewardAmount || 0}</span>
-              )}
-              {ref.status === "pending" && (
-                <span className="text-yellow-600 text-sm">Pending</span>
-              )}
-              {ref.status === "rejected" && (
-                <span className="text-red-600 text-sm">Rejected</span>
-              )}
+              {ref.status === "completed" && <span className="text-green-600 font-bold">+₹{ref.rewardAmount || 0}</span>}
+              {ref.status === "pending" && <span className="text-yellow-600 text-sm">Pending</span>}
+              {ref.status === "rejected" && <span className="text-red-600 text-sm">Rejected</span>}
             </div>
           ))}
         </div>
