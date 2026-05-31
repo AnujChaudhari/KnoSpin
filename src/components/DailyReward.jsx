@@ -4,13 +4,11 @@ import { useAuth } from "@/context/AuthContext";
 import { claimDailyReward } from "@/lib/gamification";
 import { toast } from "react-hot-toast";
 import { HiX, HiGift, HiLightningBolt } from "react-icons/hi";
-import dynamic from 'next/dynamic';
 
 export default function DailyReward() {
   const { user } = useAuth();
   const [showPopup, setShowPopup] = useState(false);
   const [rewardData, setRewardData] = useState(null);
-  const DailyReward = dynamic(() => import('@/components/DailyReward'), { ssr: false });
 
   useEffect(() => {
     if (!user) return;
