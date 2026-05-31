@@ -5,7 +5,10 @@ import { useState, useEffect } from "react";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import { addDoc, collection, serverTimestamp, doc, getDoc, updateDoc, increment, getDocs, query, where, orderBy, limit } from "firebase/firestore";
+import {
+  addDoc, collection, serverTimestamp, doc, getDoc,
+  updateDoc, increment, getDocs, query, where, orderBy, limit
+} from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { loadRazorpay } from "@/lib/razorpay";
 import { sendOrderConfirmation } from "@/lib/emailjs";
@@ -13,60 +16,54 @@ import { sendOrderConfirmationViaResend } from "@/lib/resend";
 import { sendNotification } from "@/lib/notifications";
 import { toast } from "react-hot-toast";
 
-/* ───────── प्रीमियम SVG आइकॉन ───────── */
-const LocationPinIcon = () => (
-  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.828 0l-4.243-4.243a8 8 0 1111.314 0z" />
-    <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+/* ───────── Premium Inline SVG Icons ───────── */
+const LocationIcon = () => (
+  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M17.657 16.657L13.414 20.9a2 2 0 01-2.828 0l-4.243-4.243a8 8 0 1111.314 0z" />
+    <path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
   </svg>
 );
 
 const CoinIcon = () => (
-  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <circle cx="12" cy="12" r="9" />
-    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6l3 2" />
-  </svg>
-);
-
-const WalletIcon = () => (
-  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <rect x="2" y="5" width="20" height="14" rx="2" />
-    <path strokeLinecap="round" strokeLinejoin="round" d="M16 10h4" />
+  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <ellipse cx="12" cy="5" rx="9" ry="3" />
+    <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
+    <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
   </svg>
 );
 
 const CashIcon = () => (
-  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
+  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
   </svg>
 );
 
-const CardIcon = () => (
-  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+const OnlinePayIcon = () => (
+  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="2" y="5" width="20" height="14" rx="2" />
-    <line strokeLinecap="round" x1="2" y1="10" x2="22" y2="10" />
+    <line x1="2" y1="10" x2="22" y2="10" />
   </svg>
 );
 
-const ShieldCheckIcon = () => (
-  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4" />
+const SecureIcon = () => (
+  <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    <path d="M9 12l2 2 4-4" />
   </svg>
 );
 
-// --- Main Component ---
 export default function CheckoutPage() {
   const { cart, cartTotal, clearCart } = useCart();
   const { user } = useAuth();
   const router = useRouter();
+
   const [address, setAddress] = useState({ name: "", phone: "", street: "", city: "", pincode: "" });
   const [paymentMethod, setPaymentMethod] = useState("cod");
-  const [couponDiscount] = useState(0); // future integration
   const [userProfile, setUserProfile] = useState(null);
   const [useCoins, setUseCoins] = useState(false);
   const [coinsToUse, setCoinsToUse] = useState(0);
 
+  // Fetch user profile for coin balance
   useEffect(() => {
     if (!user) return;
     const fetchProfile = async () => {
@@ -76,22 +73,22 @@ export default function CheckoutPage() {
     fetchProfile();
   }, [user]);
 
-  // Determine cart composition
+  // Determine if cart contains any digital product
   const hasDigitalProduct = cart.some(item => item.isDigital);
+  // Only when the cart is entirely digital, coins can be used
   const allDigital = cart.every(item => item.isDigital);
-
-  // Coin logic: only allowed when ALL items are digital
-  const coinsAllowed = allDigital && userProfile?.coinBalance > 0;
-  const coinDiscount = useCoins ? Math.min(coinsToUse, userProfile?.coinBalance || 0) : 0;
-  const finalTotal = Math.max(0, cartTotal - couponDiscount - coinDiscount);
+  const coinsAllowed = allDigital && (userProfile?.coinBalance ?? 0) > 0;
+  const coinDiscount = useCoins ? Math.min(coinsToUse, userProfile?.coinBalance ?? 0) : 0;
+  const finalTotal = Math.max(0, cartTotal - coinDiscount);
 
   const handlePlaceOrder = async () => {
     if (!user) return toast.error("Please login first");
     if (!address.name || !address.phone) return toast.error("Fill all address fields");
+    if (cart.length === 0) return toast.error("Cart is empty");
 
-    // For digital only orders, force online payment
-    if (allDigital && paymentMethod !== "razorpay") {
-      toast.error("Digital products require online payment. Please select Pay Online.");
+    // Force online payment for digital orders
+    if (hasDigitalProduct && paymentMethod !== "razorpay") {
+      toast.error("Orders with digital products require online payment.");
       return;
     }
 
@@ -110,7 +107,7 @@ export default function CheckoutPage() {
       trackingUrl: '',
     };
 
-    // Coins deduction (only if used)
+    // Deduct coins if used
     if (useCoins && coinDiscount > 0) {
       await updateDoc(doc(db, "users", user.uid), {
         coinBalance: increment(-coinDiscount),
@@ -121,15 +118,15 @@ export default function CheckoutPage() {
         amount: 0,
         coins: -coinDiscount,
         description: `Coins used for order discount`,
-        orderId: "",
+        orderId: "", // will be updated later
         createdAt: serverTimestamp(),
       });
     }
 
-    // Email parameters
+    // Common email parameters
     const emailParams = {
       ...orderData,
-      orderId: "",
+      orderId: "", // will set after order creation
       total: finalTotal,
       address_name: address.name,
       address_phone: address.phone,
@@ -138,106 +135,105 @@ export default function CheckoutPage() {
       address_pincode: address.pincode,
       to_email: user.email,
       to_name: address.name,
+      items: cart.map(item => ({
+        ...item,
+        subtotal: (item.price * item.quantity).toFixed(2)
+      })),
     };
 
+    // Razorpay flow
     if (paymentMethod === "razorpay") {
-      const res = await fetch("/api/razorpay/order", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: finalTotal }),
-      });
-      const data = await res.json();
-      const isLoaded = await loadRazorpay();
-      if (!isLoaded) return toast.error("Razorpay SDK failed to load");
+      try {
+        const res = await fetch("/api/razorpay/order", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ amount: finalTotal }),
+        });
+        const data = await res.json();
+        const isLoaded = await loadRazorpay();
+        if (!isLoaded) return toast.error("Razorpay SDK failed to load");
 
-      const options = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-        amount: data.amount,
-        currency: "INR",
-        name: "Quick Shop",
-        order_id: data.id,
-        handler: async function (response) {
-          const verifyRes = await fetch("/api/razorpay/verify", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ ...response, orderId: data.id }),
-          });
-          const verifyData = await verifyRes.json();
-          if (verifyData.success) {
-            const docRef = await addDoc(collection(db, "orders"), {
-              ...orderData,
-              paymentId: response.razorpay_payment_id,
-              paymentStatus: "paid",
+        const options = {
+          key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+          amount: data.amount,
+          currency: "INR",
+          name: "Quick Shop",
+          order_id: data.id,
+          handler: async function (response) {
+            const verifyRes = await fetch("/api/razorpay/verify", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ ...response, orderId: data.id }),
             });
+            const verifyData = await verifyRes.json();
+            if (verifyData.success) {
+              const docRef = await addDoc(collection(db, "orders"), {
+                ...orderData,
+                paymentId: response.razorpay_payment_id,
+                paymentStatus: "paid",
+              });
 
-            // Update coin transaction with order ID
-            if (useCoins && coinDiscount > 0) {
-              const txSnap = await getDocs(query(collection(db, "wallet_transactions"),
-                where("userId", "==", user.uid), where("orderId", "==", ""), orderBy("createdAt", "desc"), limit(1)));
-              if (!txSnap.empty) {
-                await updateDoc(doc(db, "wallet_transactions", txSnap.docs[0].id), { orderId: docRef.id });
+              // Update coin transaction with order ID
+              if (useCoins && coinDiscount > 0) {
+                const txSnap = await getDocs(query(
+                  collection(db, "wallet_transactions"),
+                  where("userId", "==", user.uid),
+                  where("orderId", "==", ""),
+                  orderBy("createdAt", "desc"),
+                  limit(1)
+                ));
+                if (!txSnap.empty) {
+                  await updateDoc(doc(db, "wallet_transactions", txSnap.docs[0].id), { orderId: docRef.id });
+                }
               }
+
+              emailParams.orderId = docRef.id;
+              sendOrderConfirmation(emailParams).catch(err => console.error("EmailJS:", err));
+              sendOrderConfirmationViaResend(emailParams).catch(err => console.error("Resend:", err));
+              sendNotification(user.uid, "order", "Order Placed", `Your order #${docRef.id} has been placed. Total: ₹${finalTotal}`, "/dashboard/orders");
+
+              clearCart();
+              toast.success("Payment successful!");
+              router.push(`/order-confirmation?id=${docRef.id}`);
+            } else {
+              toast.error("Payment verification failed");
             }
-
-            // Send emails
-            emailParams.orderId = docRef.id;
-            sendOrderConfirmation({ ...emailParams, items: cart.map(i => ({...i, subtotal: (i.price*i.quantity).toFixed(2)})) })
-              .catch(err => console.error("EmailJS:", err));
-            sendOrderConfirmationViaResend(emailParams)
-              .catch(err => console.error("Resend:", err));
-
-            // ✅ Send notification
-            sendNotification(
-              user.uid,
-              "order",
-              "Order Placed Successfully",
-              `Your order #${docRef.id} has been placed. Total: ₹${finalTotal}`,
-              "/dashboard/orders"
-            );
-
-            clearCart();
-            toast.success("Order placed!");
-            router.push(`/order-confirmation?id=${docRef.id}`);
-          } else {
-            toast.error("Payment verification failed");
-          }
-        },
-        theme: { color: "#3b82f6" },
-      };
-      const rzp = new window.Razorpay(options);
-      rzp.open();
+          },
+          theme: { color: "#3b82f6" },
+        };
+        const rzp = new window.Razorpay(options);
+        rzp.open();
+      } catch (err) {
+        toast.error("Payment initiation failed");
+        console.error(err);
+      }
     } else {
-      // COD (only possible when no digital items)
+      // COD flow (only physical products)
       const docRef = await addDoc(collection(db, "orders"), {
         ...orderData,
         paymentStatus: "pending",
       });
 
       if (useCoins && coinDiscount > 0) {
-        const txSnap = await getDocs(query(collection(db, "wallet_transactions"),
-          where("userId", "==", user.uid), where("orderId", "==", ""), orderBy("createdAt", "desc"), limit(1)));
+        const txSnap = await getDocs(query(
+          collection(db, "wallet_transactions"),
+          where("userId", "==", user.uid),
+          where("orderId", "==", ""),
+          orderBy("createdAt", "desc"),
+          limit(1)
+        ));
         if (!txSnap.empty) {
           await updateDoc(doc(db, "wallet_transactions", txSnap.docs[0].id), { orderId: docRef.id });
         }
       }
 
       emailParams.orderId = docRef.id;
-      sendOrderConfirmation({ ...emailParams, items: cart.map(i => ({...i, subtotal: (i.price*i.quantity).toFixed(2)})) })
-        .catch(err => console.error("EmailJS:", err));
-      sendOrderConfirmationViaResend(emailParams)
-        .catch(err => console.error("Resend:", err));
-
-      // ✅ Send notification
-      sendNotification(
-        user.uid,
-        "order",
-        "Order Placed Successfully",
-        `Your COD order #${docRef.id} has been placed. Total: ₹${finalTotal}`,
-        "/dashboard/orders"
-      );
+      sendOrderConfirmation(emailParams).catch(err => console.error("EmailJS:", err));
+      sendOrderConfirmationViaResend(emailParams).catch(err => console.error("Resend:", err));
+      sendNotification(user.uid, "order", "Order Placed", `Your COD order #${docRef.id} has been placed. Total: ₹${finalTotal}`, "/dashboard/orders");
 
       clearCart();
-      toast.success("Order placed with Cash on Delivery");
+      toast.success("Order placed successfully!");
       router.push(`/order-confirmation?id=${docRef.id}`);
     }
   };
@@ -245,7 +241,7 @@ export default function CheckoutPage() {
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-8 flex items-center gap-3">
-        <ShieldCheckIcon />
+        <SecureIcon />
         Secure Checkout
       </h1>
 
@@ -253,7 +249,7 @@ export default function CheckoutPage() {
         {/* Shipping Address */}
         <div className="card">
           <h2 className="font-semibold mb-4 flex items-center gap-2">
-            <LocationPinIcon /> Shipping Address
+            <LocationIcon /> Shipping Address
           </h2>
           <input placeholder="Full Name" value={address.name} onChange={e => setAddress({...address, name: e.target.value})} className="input-field" />
           <input placeholder="Phone" value={address.phone} onChange={e => setAddress({...address, phone: e.target.value})} className="input-field" />
@@ -264,7 +260,7 @@ export default function CheckoutPage() {
           </div>
         </div>
 
-        {/* Coins Redemption – only for all‑digital orders */}
+        {/* Coins Redemption (only digital products) */}
         {coinsAllowed && (
           <div className="card">
             <h2 className="font-semibold mb-3 flex items-center gap-2">
@@ -297,7 +293,7 @@ export default function CheckoutPage() {
             )}
             {coinDiscount > 0 && (
               <p className="text-green-600 text-sm mt-2 flex items-center gap-1">
-                <WalletIcon /> You save ₹{coinDiscount} with coins!
+                <CoinIcon /> You save ₹{coinDiscount} with coins!
               </p>
             )}
           </div>
@@ -306,9 +302,9 @@ export default function CheckoutPage() {
         {/* Payment Method */}
         <div className="card">
           <h2 className="font-semibold mb-4 flex items-center gap-2">
-            <CardIcon /> Payment Method
+            <OnlinePayIcon /> Payment Method
           </h2>
-          <div className="flex gap-4">
+          <div className="flex flex-wrap gap-4">
             {!hasDigitalProduct && (
               <button
                 onClick={() => setPaymentMethod("cod")}
@@ -329,15 +325,13 @@ export default function CheckoutPage() {
                   : "border-gray-300 hover:border-gray-400 dark:border-gray-600"
               }`}
             >
-              <WalletIcon /> Pay Online
+              <OnlinePayIcon /> Pay Online
             </button>
           </div>
           {hasDigitalProduct && (
             <div className="mt-3 flex items-start gap-2 text-amber-600 dark:text-amber-400 text-sm">
               <span className="flex-shrink-0 mt-0.5">⚠️</span>
-              <span>Cash on Delivery is not available for orders containing digital products. Please choose Pay Online.
-                    📢 DM me if you encounter any problems:
-                    👉 Telegram Handle: @QuickShopPro</span>
+              <span>Cash on Delivery is not available for orders containing digital products. Please choose Pay Online.</span>
             </div>
           )}
         </div>
