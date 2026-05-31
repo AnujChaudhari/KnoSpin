@@ -29,7 +29,10 @@ export default function EditProductPage() {
   }, [productId, router]);
 
   const handleSubmit = async (formData, images) => {
+    // Start with existing images
     const imageUrls = [...(initialData.images || [])];
+    
+    // Upload new images if any
     if (images.length > 0) {
       toast.loading("Uploading new images...");
       for (const file of images) {
@@ -38,6 +41,8 @@ export default function EditProductPage() {
       }
       toast.dismiss();
     }
+
+    // Update product (digitalUrl automatically included via ...formData)
     await updateDoc(doc(db, "products", productId), {
       ...formData,
       price: Number(formData.price),
@@ -51,7 +56,7 @@ export default function EditProductPage() {
     router.push("/admin/products");
   };
 
-  if (!initialData) return <div>Loading...</div>;
+  if (!initialData) return <div className="p-4">Loading...</div>;
 
   return (
     <div>
