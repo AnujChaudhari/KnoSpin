@@ -1,15 +1,8 @@
 "use client";
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useRef } from "react";
 import { useAuth } from "./AuthContext";
 import { db } from "@/lib/firebase";
-import {
-  doc,
-  setDoc,
-  deleteDoc,
-  onSnapshot,
-  updateDoc,
-  increment,
-} from "firebase/firestore";
+import { doc, getDoc, setDoc, deleteDoc } from "firebase/firestore";
 
 const CartContext = createContext();
 
@@ -19,29 +12,51 @@ export function CartProvider({ children }) {
   const { user } = useAuth();
   const [cart, setCart] = useState([]);
   const [loading, setLoading] = useState(true);
+  const intervalRef = useRef(null);
 
-  useEffect(() => {
-    if (!user) {
-      setCart([]);
-      setLoading(false);
-      return;
-    }
-    const cartRef = doc(db, "carts", user.uid);
-    const unsub = onSnapshot(cartRef, (snap) => {
+  // फ़ंक्शन: Firestore से कार्ट लाएँ (बिना onSnapshot के)
+  const fetchCart = async (uid) => {
+    try {
+      const snap = await getDoc(doc(db, "carts", uid));
       if (snap.exists()) {
         setCart(snap.data().items || []);
       } else {
         setCart([]);
       }
+    } catch (error) {
+      console.error("Cart fetch error:", error);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    if (!user) {
+      setCart([]);
       setLoading(false);
-    });
-    return unsub;
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      return;
+    }
+
+    // पहली बार लोड करें
+    fetchCart(user.uid);
+
+    // हर 30 सेकंड में सिंक करें (बैकग्राउंड में)
+    intervalRef.current = setInterval(() => {
+      fetchCart(user.uid);
+    }, 30000);
+
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
   }, [user]);
 
   const saveCart = async (items) => {
     if (!user) return;
-    const cartRef = doc(db, "carts", user.uid);
-    await setDoc(cartRef, { items }, { merge: true });
+    try {
+      await setDoc(doc(db, "carts", user.uid), { items }, { merge: true });
+    } catch (error) {
+      console.error("Cart save error:", error);
+    }
   };
 
   const addToCart = async (product, quantity = 1) => {
@@ -59,7 +74,7 @@ export function CartProvider({ children }) {
           productId: product.id,
           name: product.name,
           price: product.price,
-          image: product.images[0],
+          image: product.images?.[0] || "/placeholder.jpg",
           quantity,
         },
       ];
@@ -84,7 +99,11 @@ export function CartProvider({ children }) {
 
   const clearCart = async () => {
     if (user) {
-      await deleteDoc(doc(db, "carts", user.uid));
+      try {
+        await deleteDoc(doc(db, "carts", user.uid));
+      } catch (error) {
+        console.error("Cart clear error:", error);
+      }
     }
     setCart([]);
   };
