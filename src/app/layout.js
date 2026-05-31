@@ -42,7 +42,7 @@ export default function RootLayout({ children }) {
         {/* Daily Reward popup (client‑only) */}
         <DailyReward />
         {/* Register service worker for offline caching */}
-        <script
+       // <script
           dangerouslySetInnerHTML={{
             __html: `
               if ('serviceWorker' in navigator) {
