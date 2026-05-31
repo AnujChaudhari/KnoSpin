@@ -5,7 +5,7 @@ import { useCart } from "@/context/CartContext";
 import Link from "next/link";
 import { HiMenu, HiX, HiShoppingCart, HiUser, HiLogout } from "react-icons/hi";
 import ThemeToggle from "./ThemeToggle";
-// NotificationBell को पूरी तरह हटा दिया गया है – import और JSX दोनों
+import NotificationBell from "./NotificationBell"; // ✅ वापस जोड़ा गया
 
 export default function Header() {
   const { user, logout, isAdmin, loading } = useAuth();
@@ -39,7 +39,7 @@ export default function Header() {
 
         <div className="flex items-center gap-4">
           <ThemeToggle />
-          {/* NotificationBell हटा दिया गया */}
+          <NotificationBell />  {/* ✅ बेल आइकन अब सक्रिय */}
           <Link href="/cart" className="relative">
             <HiShoppingCart className="w-6 h-6" />
             {cart.length > 0 && (
