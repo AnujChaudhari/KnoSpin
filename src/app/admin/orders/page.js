@@ -136,12 +136,13 @@ export default function AdminOrders() {
         createdAt: serverTimestamp(),
       });
 
-      // 6. Update referrer's balances and stats
+      // 6. Update referrer's balances, stats, and XP
       await updateDoc(doc(db, "users", referredBy), {
         walletBalance: increment(rewardAmount),
         coinBalance: increment(rewardCoins),
         totalReferrals: increment(1),
         referralEarnings: increment(rewardAmount),
+        xp: increment(100),          // ✅ XP reward for successful referral
       });
 
       // 7. Tier upgrade for referrer
@@ -152,13 +153,14 @@ export default function AdminOrders() {
       else if (totalRefs >= 5) newTier = "silver";
       await updateDoc(doc(db, "users", referredBy), { referralTier: newTier });
 
-      // 8. (Optional) Pyramid bonus – grand referrer gets 5 coins
+      // 8. Pyramid bonus – grand referrer (original referrer of the referrer) gets 5 coins + XP
       if (userData.referredBy) {
         const grandReferrerId = userData.referredBy;
         if (grandReferrerId) {
           await updateDoc(doc(db, "users", grandReferrerId), {
             coinBalance: increment(5),
             referralEarnings: increment(5),
+            xp: increment(10),        // ✅ XP for pyramid bonus
           });
           await addDoc(collection(db, "wallet_transactions"), {
             userId: grandReferrerId,
