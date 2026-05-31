@@ -13,7 +13,7 @@ import { db } from "@/lib/firebase";
 import { loadRazorpay } from "@/lib/razorpay";
 import { sendOrderConfirmation } from "@/lib/emailjs";
 import { sendOrderConfirmationViaResend } from "@/lib/resend";
-import { sendNotification } from "@/lib/notifications";
+import { sendNotification } from "@/lib/notifications";          // ✅ new
 import { toast } from "react-hot-toast";
 
 /* ---------- Premium Inline SVG Icons ---------- */
@@ -62,7 +62,7 @@ export default function CheckoutPage() {
 
   // ---------- state ----------
   const [address, setAddress] = useState({ name: "", phone: "", street: "", city: "", pincode: "" });
-  const [paymentMethod, setPaymentMethod] = useState("cod");
+  const [paymentMethod, setPaymentMethod] = useState("razorpay");   // default to online if digital
   const [userProfile, setUserProfile] = useState(null);
   const [useCoins, setUseCoins] = useState(false);
   const [coinsToUse, setCoinsToUse] = useState(0);
@@ -70,8 +70,8 @@ export default function CheckoutPage() {
 
   // ---------- derived flags ----------
   const hasPhysical = cart.some(item => !item.isDigital);
-  const hasDigital = cart.some(item => item.isDigital);
-  const allDigital = cart.every(item => item.isDigital);
+  const hasDigital  = cart.some(item => item.isDigital);
+  const allDigital  = cart.every(item => item.isDigital);            // pure digital order
   const coinsAllowed = allDigital && (userProfile?.coinBalance ?? 0) > 0;
   const coinDiscount = useCoins ? Math.min(coinsToUse, userProfile?.coinBalance ?? 0) : 0;
   const finalTotal = Math.max(0, cartTotal - coinDiscount);
@@ -91,12 +91,12 @@ export default function CheckoutPage() {
     if (!user) return toast.error("Please login first");
     if (cart.length === 0) return toast.error("Cart is empty");
 
-    // address is required only if cart contains physical items
+    // address only for physical items
     if (hasPhysical && (!address.name || !address.phone)) {
       return toast.error("Fill all address fields");
     }
 
-    // force online payment for digital orders
+    // digital orders → force online payment
     if (hasDigital && paymentMethod !== "razorpay") {
       return toast.error("Orders with digital products require online payment.");
     }
@@ -109,7 +109,7 @@ export default function CheckoutPage() {
       email: user.email,
       items: cart,
       total: finalTotal,
-      address: hasPhysical ? address : null,   // no address for pure digital orders
+      address: hasPhysical ? address : null,
       paymentMethod,
       status: "pending",
       createdAt: serverTimestamp(),
@@ -119,18 +119,19 @@ export default function CheckoutPage() {
       trackingUrl: '',
     };
 
-    // deduct coins if used
+    // ---- coins deduction (if used) ----
     if (useCoins && coinDiscount > 0) {
       await updateDoc(doc(db, "users", user.uid), {
         coinBalance: increment(-coinDiscount),
       });
-      await addDoc(collection(db, "wallet_transactions"), {
+      // placeholder transaction – orderId will be updated after order creation
+      const txRef = await addDoc(collection(db, "wallet_transactions"), {
         userId: user.uid,
         type: "purchase",
         amount: 0,
         coins: -coinDiscount,
-        description: `Coins used for order discount`,
-        orderId: "",
+        description: "Coins used for order discount",
+        orderId: "",          // will be patched
         createdAt: serverTimestamp(),
       });
     }
@@ -142,7 +143,7 @@ export default function CheckoutPage() {
         ...paymentDetails,
       });
 
-      // update coin transaction with real order id
+      // patch coin transaction with real order id
       if (useCoins && coinDiscount > 0) {
         const txSnap = await getDocs(query(
           collection(db, "wallet_transactions"),
@@ -156,7 +157,7 @@ export default function CheckoutPage() {
         }
       }
 
-      // ----- emails & notifications -----
+      // ----- emails & notification -----
       const emailParams = {
         ...orderData,
         orderId: docRef.id,
@@ -175,6 +176,7 @@ export default function CheckoutPage() {
       };
       sendOrderConfirmation(emailParams).catch(err => console.error("EmailJS:", err));
       sendOrderConfirmationViaResend(emailParams).catch(err => console.error("Resend:", err));
+      // 🔔 notification
       sendNotification(user.uid, "order", "Order Placed",
         `Your order #${docRef.id} has been placed. Total: ₹${finalTotal}`, "/dashboard/orders");
 
@@ -252,7 +254,7 @@ export default function CheckoutPage() {
         setPlacing(false);
       }
     } else {
-      // COD (only when no digital item)
+      // COD (allowed only when no digital items)
       await finalizeOrder({ paymentStatus: "pending" });
       toast.success("Order placed successfully!");
     }
@@ -267,7 +269,7 @@ export default function CheckoutPage() {
       </h1>
 
       <div className="space-y-6">
-        {/* ----- Shipping Address (only for physical products) ----- */}
+        {/* ----- Shipping Address (only when physical present) ----- */}
         {hasPhysical && (
           <div className="card">
             <h2 className="font-semibold mb-4 flex items-center gap-2">
@@ -287,7 +289,7 @@ export default function CheckoutPage() {
         {coinsAllowed && (
           <div className="card">
             <h2 className="font-semibold mb-3 flex items-center gap-2">
-              <CoinIcon /> Use Coins
+              <CoinIcon /> Use Coins (Digital Products Only)
             </h2>
             <p className="text-sm mb-2">
               Available: <strong>{userProfile.coinBalance}</strong> coins (1 coin = ₹1 discount)
