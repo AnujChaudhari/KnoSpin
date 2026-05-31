@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
-import { HiShoppingBag, HiUser, HiCurrencyRupee, HiShare, HiTrophy, HiBell } from "react-icons/hi";
+import { HiShare, HiTrophy, HiCurrencyRupee } from "react-icons/hi";
 
 export default function ReferralDashboard() {
   const { user } = useAuth();
