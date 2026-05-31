@@ -4,11 +4,12 @@ export const dynamic = 'force-dynamic';
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
-import { doc, getDoc, setDoc, collection, query, where, getDocs, serverTimestamp, limit } from "firebase/firestore";
+import { doc, getDoc, collection, query, where, getDocs, limit, setDoc, serverTimestamp } from "firebase/firestore";
 import { HiCurrencyRupee, HiCash, HiGift, HiClock, HiEmojiSad, HiSparkles } from "react-icons/hi";
 
 export default function WalletPage() {
-  const { user } = useAuth();
+  const auth = useAuth();
+  const user = auth?.user;
   const [profile, setProfile] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [loadingProfile, setLoadingProfile] = useState(true);
@@ -60,9 +61,8 @@ export default function WalletPage() {
         );
         const txSnap = await getDocs(q);
         let txList = txSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        // क्लाइंट-साइड सॉर्ट (नवीनतम पहले)
         txList.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
-        txList = txList.slice(0, 50); // limit 50
+        txList = txList.slice(0, 50);
         setTransactions(txList);
       } catch (err) {
         console.error("Error fetching transactions:", err);
