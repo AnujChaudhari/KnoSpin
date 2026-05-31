@@ -1,6 +1,7 @@
 "use client";
 export const dynamic = 'force-dynamic';
 
+import { HiShoppingBag, HiUser, HiCurrencyRupee, HiShare, HiTrophy, HiBell } from "react-icons/hi";
 import { useAuth } from "@/context/AuthContext";
 import Link from "next/link";
 import { useState, useEffect } from "react";
