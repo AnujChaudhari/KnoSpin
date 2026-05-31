@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic';
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
-import { doc, getDoc, setDoc, collection, query, where, orderBy, getDocs, serverTimestamp, limit } from "firebase/firestore";
+import { doc, getDoc, setDoc, collection, query, where, getDocs, serverTimestamp, limit } from "firebase/firestore";
 import { HiCurrencyRupee, HiCash, HiGift, HiClock, HiEmojiSad, HiSparkles } from "react-icons/hi";
 
 export default function WalletPage() {
@@ -24,12 +24,10 @@ export default function WalletPage() {
 
     const fetchData = async () => {
       try {
-        // Ensure user document exists
         const userDocRef = doc(db, "users", user.uid);
         const userSnap = await getDoc(userDocRef);
         
         if (!userSnap.exists()) {
-          // Create user document with default values
           const defaultProfile = {
             email: user.email || "",
             referralCode: Math.random().toString(36).substring(2, 8).toUpperCase(),
@@ -53,18 +51,21 @@ export default function WalletPage() {
       }
       setLoadingProfile(false);
 
-      // Fetch transactions
+      // Fetch transactions – बिना orderBy के (कोई index नहीं चाहिए)
       try {
-        const txSnap = await getDocs(query(
+        const q = query(
           collection(db, "wallet_transactions"),
           where("userId", "==", user.uid),
-          orderBy("createdAt", "desc"),
-          limit(50) // Limit to last 50 transactions
-        ));
-        setTransactions(txSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+          limit(50)
+        );
+        const txSnap = await getDocs(q);
+        let txList = txSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        // क्लाइंट-साइड सॉर्ट (नवीनतम पहले)
+        txList.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
+        txList = txList.slice(0, 50); // limit 50
+        setTransactions(txList);
       } catch (err) {
         console.error("Error fetching transactions:", err);
-        // If index doesn't exist yet, show empty gracefully
         setTransactions([]);
       }
       setLoadingTx(false);
