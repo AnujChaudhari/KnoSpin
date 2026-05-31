@@ -1,7 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://yourdomain.vercel.app/</loc></url>
-  <url><loc>https://yourdomain.vercel.app/products</loc></url>
-  <url><loc>https://yourdomain.vercel.app/login</loc></url>
-  <!-- Add more -->
+  <url><loc>https://quickshoppro.vercel.app/</loc></url>
+  <url><loc>https://quickshoppro.vercel.app/products</loc></url>
+  <url><loc>https://quickshoppro.vercel.app/contact</loc></url>
+  <url><loc>https://quickshoppro.vercel.app/faq</loc></url>
+  <url><loc>https://quickshoppro.vercel.app/privacy</loc></url>
+  <url><loc>https://quickshoppro.vercel.app/terms</loc></url>
+  <url><loc>https://quickshoppro.vercel.app/about</loc></url>
+  <url><loc>https://quickshoppro.vercel.app/shipping</loc></url>
+  <url><loc>https://quickshoppro.vercel.app/returns</loc></url>
+  <url><loc>https://quickshoppro.vercel.app/login</loc></url>
+  <url><loc>https://quickshoppro.vercel.app/signup</loc></url>
+  <url><loc>https://quickshoppro.vercel.app/leaderboard</loc></url>
 </urlset>
