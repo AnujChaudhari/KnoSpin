@@ -17,7 +17,6 @@ import {
   increment
 } from "firebase/firestore";
 import { toast } from "react-hot-toast";
-import { sendNotification } from "@/lib/notifications"; // ✅ new import
 
 /* ───────── SVG Icons ───────── */
 const UserIcon = () => (
@@ -67,34 +66,44 @@ export default function AdminOrders() {
   const [orders, setOrders] = useState([]);
   const [trackingInput, setTrackingInput] = useState({});
 
+  // ========== Fetch Orders ==========
   useEffect(() => {
     fetchOrders();
   }, []);
 
   const fetchOrders = async () => {
-    const q = query(collection(db, "orders"), orderBy("createdAt", "desc"));
-    const snap = await getDocs(q);
-    const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    setOrders(list);
-    const initialTracking = {};
-    list.forEach(o => {
-      if (o.trackingUrl) initialTracking[o.id] = o.trackingUrl;
-    });
-    setTrackingInput(initialTracking);
+    try {
+      const q = query(collection(db, "orders"), orderBy("createdAt", "desc"));
+      const snap = await getDocs(q);
+      const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setOrders(list);
+      const initialTracking = {};
+      list.forEach(o => {
+        if (o.trackingUrl) initialTracking[o.id] = o.trackingUrl;
+      });
+      setTrackingInput(initialTracking);
+    } catch (err) {
+      console.error("Failed to fetch orders:", err);
+      toast.error("Could not load orders");
+    }
   };
 
   // ========== REFERRAL REWARD AUTOMATION ==========
   const processReferralReward = async (order) => {
+    // Only run when order is delivered
     if (order.status !== "delivered") return;
 
     try {
+      // 1. Get the user who placed the order
       const userSnap = await getDoc(doc(db, "users", order.userId));
       if (!userSnap.exists()) return;
-
       const userData = userSnap.data();
+
+      // 2. Check if this user was referred by someone
       const referredBy = userData.referredBy;
       if (!referredBy) return;
 
+      // 3. Find a pending referral for this user/referrer pair
       const refSnap = await getDocs(
         query(
           collection(db, "referrals"),
@@ -103,7 +112,6 @@ export default function AdminOrders() {
           where("status", "==", "pending")
         )
       );
-
       if (refSnap.empty) return;
 
       const referralDoc = refSnap.docs[0];
@@ -111,13 +119,13 @@ export default function AdminOrders() {
       const rewardAmount = referralData.rewardAmount || 20;
       const rewardCoins = referralData.rewardCoins || 50;
 
-      // 1. Mark referral as completed
+      // 4. Mark referral as completed
       await updateDoc(doc(db, "referrals", referralDoc.id), {
         status: "completed",
         completedAt: serverTimestamp(),
       });
 
-      // 2. Create wallet transaction
+      // 5. Add wallet transaction for referrer
       await addDoc(collection(db, "wallet_transactions"), {
         userId: referredBy,
         type: "referral_reward",
@@ -128,7 +136,7 @@ export default function AdminOrders() {
         createdAt: serverTimestamp(),
       });
 
-      // 3. Update referrer's balances and stats
+      // 6. Update referrer's balances and stats
       await updateDoc(doc(db, "users", referredBy), {
         walletBalance: increment(rewardAmount),
         coinBalance: increment(rewardCoins),
@@ -136,50 +144,71 @@ export default function AdminOrders() {
         referralEarnings: increment(rewardAmount),
       });
 
-      // 4. Tier upgrade
+      // 7. Tier upgrade for referrer
       const updatedUserSnap = await getDoc(doc(db, "users", referredBy));
       const totalRefs = updatedUserSnap.data().totalReferrals || 0;
       let newTier = "bronze";
       if (totalRefs >= 15) newTier = "gold";
       else if (totalRefs >= 5) newTier = "silver";
+      await updateDoc(doc(db, "users", referredBy), { referralTier: newTier });
 
-      await updateDoc(doc(db, "users", referredBy), {
-        referralTier: newTier,
-      });
-
-      // ✅ Send notification to referrer
-      sendNotification(
-        referredBy,
-        "referral",
-        "Referral Reward",
-        `You earned ₹${rewardAmount} and ${rewardCoins} coins for a successful referral.`,
-        "/dashboard/referrals"
-      );
+      // 8. (Optional) Pyramid bonus – grand referrer gets 5 coins
+      if (userData.referredBy) {
+        const grandReferrerId = userData.referredBy;
+        if (grandReferrerId) {
+          await updateDoc(doc(db, "users", grandReferrerId), {
+            coinBalance: increment(5),
+            referralEarnings: increment(5),
+          });
+          await addDoc(collection(db, "wallet_transactions"), {
+            userId: grandReferrerId,
+            type: "referral_reward",
+            amount: 0,
+            coins: 5,
+            description: "Pyramid bonus for grand referral",
+            createdAt: serverTimestamp(),
+          });
+        }
+      }
 
       toast.success(`Referral reward of ₹${rewardAmount} + ${rewardCoins} coins credited!`);
     } catch (error) {
       console.error("Referral reward processing failed:", error);
     }
   };
-  // ========== END REFERRAL REWARD ==========
 
+  // ========== Update Order Status ==========
   const updateStatus = async (orderId, newStatus) => {
-    await updateDoc(doc(db, "orders", orderId), { status: newStatus });
-    toast.success("Status updated");
-    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+    try {
+      await updateDoc(doc(db, "orders", orderId), { status: newStatus });
+      toast.success("Status updated");
 
-    const updatedOrder = orders.find(o => o.id === orderId);
-    if (updatedOrder) {
-      await processReferralReward({ ...updatedOrder, status: newStatus });
+      // Refresh orders list
+      const updatedOrders = orders.map(o => o.id === orderId ? { ...o, status: newStatus } : o);
+      setOrders(updatedOrders);
+
+      // Process referral reward if applicable
+      const orderToProcess = updatedOrders.find(o => o.id === orderId);
+      if (orderToProcess) {
+        await processReferralReward(orderToProcess);
+      }
+    } catch (err) {
+      toast.error("Failed to update status");
     }
   };
 
+  // ========== Save Tracking URL ==========
   const saveTrackingUrl = async (orderId) => {
     const url = trackingInput[orderId] || '';
-    await updateDoc(doc(db, "orders", orderId), { trackingUrl: url });
-    toast.success("Tracking link saved");
+    try {
+      await updateDoc(doc(db, "orders", orderId), { trackingUrl: url });
+      toast.success("Tracking link saved");
+    } catch (err) {
+      toast.error("Failed to save tracking link");
+    }
   };
 
+  // ========== RENDER ==========
   return (
     <div className="p-4 md:p-0">
       <h2 className="text-2xl font-bold mb-4">Orders</h2>
