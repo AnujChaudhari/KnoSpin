@@ -4,6 +4,7 @@ import { db } from "@/lib/firebase";
 import { doc, getDoc, updateDoc, addDoc, collection, serverTimestamp, increment } from "firebase/firestore";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "react-hot-toast";
+import { unlockAchievement } from "@/lib/gamification"; // ✅ Achievement helper
 
 const rewards = [5, 10, 20, 50, 100, 5, 10, 20]; // possible coin rewards
 
@@ -15,8 +16,9 @@ export default function SpinWheel() {
   const [userLevel, setUserLevel] = useState(1);
   const [userXp, setUserXp] = useState(0);
   const [userCoins, setUserCoins] = useState(0);
+  const [totalSpins, setTotalSpins] = useState(0);   // ✅ track total spins
 
-  // On mount, fetch user's current level, XP, coins and today's spin status
+  // On mount, fetch user's current data
   useEffect(() => {
     if (!user) return;
     const fetchUserData = async () => {
@@ -26,6 +28,7 @@ export default function SpinWheel() {
         setUserLevel(data.level || 1);
         setUserXp(data.xp || 0);
         setUserCoins(data.coinBalance || 0);
+        setTotalSpins(data.totalSpins || 0);          // ✅ read total spins
         const lastSpin = data.lastSpinDate;
         const today = new Date().toDateString();
         if (lastSpin === today) setSpinUsed(true);
@@ -49,14 +52,15 @@ export default function SpinWheel() {
 
       const userRef = doc(db, "users", user.uid);
 
-      // Update coins, XP, and last spin date
+      // Update coins, XP, last spin date, and increment totalSpins
       await updateDoc(userRef, {
         coinBalance: increment(win),
-        xp: increment(5),               // ✅ 5 XP per spin
+        xp: increment(5),                // ✅ 5 XP per spin
         lastSpinDate: new Date().toDateString(),
+        totalSpins: increment(1),        // ✅ increase spin count
       });
 
-      // Fetch updated document to recalculate level
+      // Fetch updated document to recalculate level and check achievement
       const updatedSnap = await getDoc(userRef);
       if (updatedSnap.exists()) {
         const data = updatedSnap.data();
@@ -66,9 +70,16 @@ export default function SpinWheel() {
           await updateDoc(userRef, { level: newLevel });
           toast.success(`🎉 Level Up! You are now Level ${newLevel}!`);
         }
+        const newTotalSpins = data.totalSpins || 0;
+        setTotalSpins(newTotalSpins);
         setUserLevel(newLevel);
         setUserXp(newXp);
         setUserCoins(data.coinBalance || 0);
+
+        // 🏆 Achievement: spin_master (10 spins)
+        if (newTotalSpins >= 10) {
+          await unlockAchievement(user.uid, "spin_master");
+        }
       }
 
       // Record transaction in wallet
@@ -89,8 +100,8 @@ export default function SpinWheel() {
     <div className="card text-center max-w-sm mx-auto">
       <h3 className="font-bold text-lg mb-4">🎡 Daily Spin & Win</h3>
 
-      {/* User stats: Level, XP, Coins */}
-      <div className="flex justify-center items-center gap-4 mb-4">
+      {/* User stats: Level, XP, Coins, Spins */}
+      <div className="flex justify-center items-center gap-4 mb-4 flex-wrap">
         <div className="bg-purple-100 dark:bg-purple-900/30 px-3 py-1 rounded-full text-sm font-bold text-purple-700 dark:text-purple-300">
           Lv. {userLevel}
         </div>
@@ -99,6 +110,9 @@ export default function SpinWheel() {
         </div>
         <div className="bg-yellow-100 dark:bg-yellow-900/30 px-3 py-1 rounded-full text-sm font-bold text-yellow-700 dark:text-yellow-300">
           🪙 {userCoins}
+        </div>
+        <div className="bg-pink-100 dark:bg-pink-900/30 px-3 py-1 rounded-full text-sm font-bold text-pink-700 dark:text-pink-300">
+          🎰 {totalSpins}
         </div>
       </div>
 
