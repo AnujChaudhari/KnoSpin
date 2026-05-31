@@ -12,7 +12,13 @@ export default function AddProductPage() {
   const router = useRouter();
 
   const handleSubmit = async (formData, images) => {
-    toast.loading("Uploading...");
+    // 🛡️ सुरक्षा जाँच – प्राइस 0 या गायब हो तो एरर दें
+    if (!formData.price || Number(formData.price) <= 0) {
+      toast.error("Please set a valid Original Price and Discount. Price cannot be zero.");
+      return;
+    }
+
+    toast.loading("Uploading images...");
     const imageUrls = [];
     for (const file of images) {
       const url = await uploadToCloudinary(file);
@@ -32,6 +38,7 @@ export default function AddProductPage() {
     }
     const productCode = "Q" + String(nextNumber).padStart(5, '0');
 
+    // Save product (digitalUrl automatically included via ...formData)
     await addDoc(collection(db, "products"), {
       ...formData,
       productCode,
