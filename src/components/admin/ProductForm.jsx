@@ -39,6 +39,7 @@ export default function ProductForm({ onSubmit, initialData = {} }) {
     isDigital: initialData.isDigital || false,
     digitalCategory: initialData.digitalCategory || "",
     downloadLimit: initialData.downloadLimit || 5,
+    digitalUrl: initialData.digitalUrl || "",       // ✅ External URL field
   });
   const [images, setImages] = useState([]);
   const [digitalFile, setDigitalFile] = useState(null);
@@ -46,10 +47,10 @@ export default function ProductForm({ onSubmit, initialData = {} }) {
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryImage, setNewCategoryImage] = useState(null);
-  const [newCategoryPreview, setNewCategoryPreview] = useState(null); // preview URL
+  const [newCategoryPreview, setNewCategoryPreview] = useState(null);
   const [addingCategory, setAddingCategory] = useState(false);
 
-  // 🧮 Auto-calculate sale price
+  // Auto-calculate sale price
   const [salePrice, setSalePrice] = useState(initialData.price || "");
   const [priceError, setPriceError] = useState("");
 
@@ -62,7 +63,7 @@ export default function ProductForm({ onSubmit, initialData = {} }) {
         setSalePrice(discounted.toFixed(2));
         setPriceError("");
       } else if (form.discountPercentage === "") {
-        setSalePrice(orig.toFixed(2)); // No discount
+        setSalePrice(orig.toFixed(2));
         setPriceError("");
       } else {
         setSalePrice("");
@@ -116,7 +117,7 @@ export default function ProductForm({ onSubmit, initialData = {} }) {
       setNewCategoryImage(null);
       setNewCategoryPreview(null);
       setShowCategoryModal(false);
-      fetchCategories(); // Refresh dropdown
+      fetchCategories();
     } catch (err) {
       toast.error("Failed to add category");
     }
@@ -142,11 +143,11 @@ export default function ProductForm({ onSubmit, initialData = {} }) {
 
     const finalData = {
       ...form,
-      price: parseFloat(salePrice), // ✅ अब यह 0 नहीं जाएगी
+      price: parseFloat(salePrice),
       digitalFileUrl,
       digitalFileName,
       digitalFileSize: digitalFile?.size || initialData.digitalFileSize || 0,
-      // originalPrice और discountPercentage तो form में पहले से हैं
+      digitalUrl: form.digitalUrl,   // ✅ external URL save
     };
 
     onSubmit(finalData, images);
@@ -169,7 +170,6 @@ export default function ProductForm({ onSubmit, initialData = {} }) {
           </div>
         </div>
 
-        {/* 💰 Sale Price Display */}
         {salePrice && (
           <div className="flex items-center gap-3 bg-green-50 dark:bg-green-900/20 p-3 rounded-xl">
             <span className="font-bold text-green-700 dark:text-green-400 text-lg">Sale Price: ₹{salePrice}</span>
@@ -183,7 +183,6 @@ export default function ProductForm({ onSubmit, initialData = {} }) {
         )}
         {priceError && <p className="text-red-500 text-sm -mt-2">{priceError}</p>}
 
-        {/* Category Selection with Add New */}
         <div>
           <label className="text-sm mb-1 block">Category</label>
           <div className="flex gap-2">
@@ -232,14 +231,36 @@ export default function ProductForm({ onSubmit, initialData = {} }) {
                   <option value="ebook">📚 eBook</option>
                 </select>
               </div>
+
               <div>
-                <label className="text-sm">Upload Digital File</label>
+                <label className="text-sm">Upload Digital File (Cloudinary)</label>
                 <input type="file" onChange={(e) => setDigitalFile(e.target.files[0])} className="input-field" accept=".pdf,.zip,.rar,.doc,.docx,.ppt,.pptx,.txt,.jpg,.jpeg,.png,.mp4,.mp3" />
                 <p className="text-xs text-gray-400 mt-1">Max 50MB | PDF, ZIP, DOC, PPT, TXT, Images, Video</p>
               </div>
+
+              {/* ✅ New: External URL field */}
+              <div>
+                <label className="text-sm">External Download URL (optional)</label>
+                <input
+                  type="url"
+                  name="digitalUrl"
+                  value={form.digitalUrl || ''}
+                  onChange={handleChange}
+                  placeholder="https://drive.google.com/... or any direct link"
+                  className="input-field"
+                />
+                <p className="text-xs text-gray-400 mt-1">If you prefer to use an external link, paste it here. It will be delivered uniquely per purchase.</p>
+              </div>
+
               <div>
                 <label className="text-sm">Download Limit</label>
                 <input type="number" name="downloadLimit" value={form.downloadLimit} onChange={handleChange} min={1} max={100} className="input-field w-32" />
+                <p className="text-xs text-gray-400 mt-1">Max downloads allowed per purchase (1-100)</p>
+              </div>
+
+              {/* ⚠️ Warning for free limits */}
+              <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 p-3 rounded-xl text-xs text-yellow-700 dark:text-yellow-400">
+                ⚠️ Using free services – large uploads may hit limits. If you face any issue, DM <strong>@QuickShopPro</strong> on Telegram.
               </div>
             </div>
           )}
@@ -266,7 +287,6 @@ export default function ProductForm({ onSubmit, initialData = {} }) {
               onChange={e => setNewCategoryName(e.target.value)}
               className="input-field"
             />
-            {/* Image upload with preview */}
             <div>
               <label className="text-sm mb-1 block flex items-center gap-1"><ImageIcon /> Category Image</label>
               <input
