@@ -1,13 +1,13 @@
 import './globals.css'
 import { Inter } from 'next/font/google'
 import ClientProviders from '@/components/ClientProviders'
-import nextDynamic from 'next/dynamic'
+// import nextDynamic from 'next/dynamic'
 
 // Force dynamic rendering – prevents static build errors
 export const dynamic = 'force-dynamic'
 
 // Load DailyReward only on the client (no SSR)
-const DailyReward = nextDynamic(() => import('@/components/DailyReward'), { ssr: false })
+// const DailyReward = nextDynamic(() => import('@/components/DailyReward'), { ssr: false })
 
 const inter = Inter({ subsets: ['latin'] })
 
