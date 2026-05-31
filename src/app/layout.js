@@ -1,7 +1,7 @@
 import './globals.css'
 import { Inter } from 'next/font/google'
 import ClientProviders from '@/components/ClientProviders'
-import nextDynamic from 'next/dynamic'   // ✅ renamed import
+import nextDynamic from 'next/dynamic'
 
 // Force dynamic rendering – prevents static build errors
 export const dynamic = 'force-dynamic'
@@ -41,22 +41,6 @@ export default function RootLayout({ children }) {
         <ClientProviders>{children}</ClientProviders>
         {/* Daily Reward popup (client‑only) */}
         <DailyReward />
-        {/* Register service worker for offline caching */}
-       // <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              if ('serviceWorker' in navigator) {
-                window.addEventListener('load', function() {
-                  navigator.serviceWorker.register('/sw.js').then(function(reg) {
-                    console.log('Service Worker registered with scope: ', reg.scope);
-                  }).catch(function(err) {
-                    console.log('Service Worker registration failed: ', err);
-                  });
-                });
-              }
-            `,
-          }}
-        />
       </body>
     </html>
   )
