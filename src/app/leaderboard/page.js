@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic';
 
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
-import { collection, getDocs, query, orderBy, limit } from "firebase/firestore";
+import { collection, getDocs, query, limit } from "firebase/firestore";
 
 /* ────── प्रीमियम SVG आइकॉन ────── */
 const TrophyIcon = () => (
@@ -38,12 +38,14 @@ export default function LeaderboardPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // लीडरबोर्ड के लिए users को XP के हिसाब से लाना (ज्यादातर एक्टिविटी)
-        const q = query(collection(db, "users"), orderBy("xp", "desc"), limit(20));
+        // बिना orderBy के, limit के साथ फ़ेच करें
+        const q = query(collection(db, "users"), limit(50));
         const snap = await getDocs(q);
-        const users = snap.docs
-          .map(doc => ({ id: doc.id, ...doc.data() }))
-          .filter(u => (u.xp || 0) > 0 || (u.totalReferrals || 0) > 0); // कम से कम कुछ एक्टिविटी हो
+        let users = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        // क्लाइंट-साइड सॉर्ट (XP के हिसाब से घटते क्रम में)
+        users.sort((a, b) => (b.xp || 0) - (a.xp || 0));
+        users = users.filter(u => (u.xp || 0) > 0 || (u.totalReferrals || 0) > 0);
+        users = users.slice(0, 20); // top 20
         setTopUsers(users);
       } catch (error) {
         console.error("Leaderboard fetch error:", error);
@@ -88,29 +90,24 @@ export default function LeaderboardPage() {
       <div className="space-y-4">
         {topUsers.map((user, idx) => (
           <div key={user.id} className="card flex items-center gap-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-            {/* रैंक / मेडल */}
             <div className="w-10 text-center flex-shrink-0">
               <MedalIcon place={idx} />
             </div>
 
-            {/* यूजर इन्फो */}
             <div className="flex-grow min-w-0">
               <p className="font-semibold truncate">{user.email?.split('@')[0] || "User"}</p>
               <div className="flex items-center gap-2 mt-1">
-                {/* टियर बैज */}
                 {user.referralTier && (
                   <span className={`text-xs font-bold ${getTierColor(user.referralTier)}`}>
                     {user.referralTier.toUpperCase()}
                   </span>
                 )}
-                {/* लेवल बैज */}
                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${getLevelColor(user.level || 1)}`}>
                   Lv.{user.level || 1}
                 </span>
               </div>
             </div>
 
-            {/* स्टैट्स */}
             <div className="flex items-center gap-4 text-right flex-shrink-0">
               <div title="Referrals">
                 <div className="flex items-center gap-1">
