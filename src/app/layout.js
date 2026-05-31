@@ -39,8 +39,8 @@ export default function RootLayout({ children }) {
       </head>
       <body className={`${inter.className} min-h-screen flex flex-col`}>
         <ClientProviders>{children}</ClientProviders>
-        {/* Daily Reward popup (client‑only) */}
-        <DailyReward />
+      {/* Daily Reward popup (client‑only) */}
+        {/* <DailyReward /> */}
       </body>
     </html>
   )
