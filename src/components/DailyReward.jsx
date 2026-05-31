@@ -1,79 +1,98 @@
 "use client";
-import { useEffect, useState } from "react";
+
+import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { claimDailyReward } from "@/lib/gamification";
+import { doc, getDoc, updateDoc, increment, serverTimestamp } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import { toast } from "react-hot-toast";
-import { HiX, HiGift, HiLightningBolt } from "react-icons/hi";
 
 export default function DailyReward() {
   const { user } = useAuth();
+  const [claimed, setClaimed] = useState(false);
   const [showPopup, setShowPopup] = useState(false);
-  const [rewardData, setRewardData] = useState(null);
+  const [reward, setReward] = useState(null);
+
+  const claimDailyReward = useCallback(async (userId) => {
+    if (!userId) return null;
+    const userRef = doc(db, "users", userId);
+    const snap = await getDoc(userRef);
+    if (!snap.exists()) return null;
+
+    const data = snap.data();
+    const today = new Date().toDateString();
+
+    // अगर आज पहले ही क्लेम कर चुके हैं
+    if (data.lastDailyClaim === today) {
+      setClaimed(true);
+      return null;
+    }
+
+    // कितने लगातार दिन (streak) – अगर कल क्लेम किया था तो बढ़ाएँ, नहीं तो 1
+    let streak = data.dailyStreak || 0;
+    const yesterday = new Date(Date.now() - 86400000).toDateString();
+    if (data.lastDailyClaim === yesterday) {
+      streak += 1;
+    } else {
+      streak = 1;
+    }
+
+    // रिवॉर्ड कैलकुलेट करें: बेस 2 कॉइन + स्ट्रीक के हिसाब से (अधिकतम 20)
+    const baseCoins = 2;
+    const streakBonus = Math.min(streak * 2, 20);
+    const totalCoins = baseCoins + streakBonus;
+    const xpGain = 10; // रोज़ाना XP
+
+    await updateDoc(userRef, {
+      coinBalance: increment(totalCoins),
+      xp: increment(xpGain),
+      dailyStreak: streak,
+      lastDailyClaim: today,
+    });
+
+    setClaimed(true);
+    return { coins: totalCoins, xp: xpGain, streak };
+  }, []);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setClaimed(false);
+      setShowPopup(false);
+      setReward(null);
+      return;
+    }
 
-    const claim = async () => {
-      try {
-        const res = await claimDailyReward(user.uid);
-        if (res) {
-          setRewardData(res);
-          setShowPopup(true);
-          toast.success(
-            `🎁 Daily Bonus: +${res.coins} Coins | Streak: ${res.streak} day${res.streak > 1 ? 's' : ''}`,
-            { duration: 5000 }
-          );
-        }
-      } catch (error) {
-        console.error("Daily reward claim failed:", error);
+    // पहले से क्लेम हो चुका है तो दोबारा मत करो
+    if (claimed) return;
+
+    const run = async () => {
+      const res = await claimDailyReward(user.uid);
+      if (res) {
+        setReward(res);
+        setShowPopup(true);
+        toast.success(`🎁 Daily reward: +${res.coins} coins, +${res.xp} XP (Streak: ${res.streak})`);
+        // 5 सेकंड बाद पॉपअप हटाएँ
+        setTimeout(() => setShowPopup(false), 5000);
       }
     };
 
-    claim();
-  }, [user]);
+    run();
+  }, [user, claimed, claimDailyReward]);
 
-  if (!showPopup || !rewardData) return null;
+  if (!showPopup || !reward) return null;
 
   return (
-    <div className="fixed bottom-24 right-4 z-50 animate-slide-up">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 p-5 w-72">
-        <div className="flex justify-between items-start mb-3">
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
-              <HiGift className="text-yellow-600 text-xl" />
-            </div>
-            <div>
-              <h4 className="font-bold text-sm">Daily Reward!</h4>
-              <p className="text-xs text-gray-500">Come back tomorrow for more</p>
-            </div>
-          </div>
-          <button
-            onClick={() => setShowPopup(false)}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-          >
-            <HiX className="w-5 h-5" />
-          </button>
-        </div>
-
-        <div className="bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 rounded-xl p-3 mb-3">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-1">
-              <HiLightningBolt className="text-yellow-500" />
-              <span className="text-2xl font-bold text-yellow-600">+{rewardData.coins}</span>
-            </div>
-            <span className="text-sm font-medium text-yellow-700 dark:text-yellow-400">
-              🔥 {rewardData.streak} Day Streak!
-            </span>
-          </div>
-        </div>
-
-        <button
-          onClick={() => setShowPopup(false)}
-          className="w-full btn-gradient text-sm py-2"
-        >
-          Awesome!
-        </button>
-      </div>
+    <div className="fixed bottom-20 right-4 bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-xl z-50 border border-gray-200 dark:border-gray-700 animate-fade-in">
+      <p className="font-bold text-lg">🎁 Daily Reward!</p>
+      <p className="text-sm text-gray-600 dark:text-gray-300">
+        +{reward.coins} coins | +{reward.xp} XP
+      </p>
+      <p className="text-xs text-gray-500">Streak: {reward.streak} day{reward.streak > 1 ? 's' : ''}</p>
+      <button
+        onClick={() => setShowPopup(false)}
+        className="text-xs text-primary-500 mt-2 hover:underline"
+      >
+        Close
+      </button>
     </div>
   );
 }
