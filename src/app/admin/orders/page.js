@@ -16,17 +16,53 @@ import {
   serverTimestamp,
   increment
 } from "firebase/firestore";
-import { sendNotification } from "@/lib/notifications"; // ✅ NEW
 import { toast } from "react-hot-toast";
+import { sendNotification } from "@/lib/notifications";
+import { unlockAchievement } from "@/lib/gamification";
 
-/* ───────── SVG Icons (same as before) ───────── */
-const UserIcon = () => ( /* ... same ... */ );
-const PhoneIcon = () => ( /* ... same ... */ );
-const ConfirmIcon = () => ( /* ... same ... */ );
-const CancelIcon = () => ( /* ... same ... */ );
-const ShippedIcon = () => ( /* ... same ... */ );
-const DeliveredIcon = () => ( /* ... same ... */ );
-const SaveIcon = () => ( /* ... same ... */ );
+/* ───────── SVG Icons ───────── */
+const UserIcon = () => (
+  <svg className="w-4 h-4 inline-block" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+  </svg>
+);
+
+const PhoneIcon = () => (
+  <svg className="w-4 h-4 inline-block" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+  </svg>
+);
+
+const ConfirmIcon = () => (
+  <svg className="w-4 h-4 inline-block" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+  </svg>
+);
+
+const CancelIcon = () => (
+  <svg className="w-4 h-4 inline-block" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+  </svg>
+);
+
+const ShippedIcon = () => (
+  <svg className="w-4 h-4 inline-block" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zm10 0a2 2 0 11-4 0 2 2 0 014 0z" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M13 17V5a2 2 0 00-2-2H4a2 2 0 00-2 2v12m11 0h2m-2 0h-2m2-4h-4m4-4h-4m4-4h-4" />
+  </svg>
+);
+
+const DeliveredIcon = () => (
+  <svg className="w-4 h-4 inline-block" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+  </svg>
+);
+
+const SaveIcon = () => (
+  <svg className="w-4 h-4 inline-block" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+  </svg>
+);
 
 export default function AdminOrders() {
   const [orders, setOrders] = useState([]);
@@ -54,111 +90,115 @@ export default function AdminOrders() {
     }
   };
 
-  // ========== REFERRAL REWARD AUTOMATION (with Notifications) ==========
+  // ========== REFERRAL REWARD + NOTIFICATIONS + ACHIEVEMENTS ==========
   const processReferralReward = async (order) => {
     if (order.status !== "delivered") return;
 
     try {
-      // 1. Get the user who placed the order
       const userSnap = await getDoc(doc(db, "users", order.userId));
       if (!userSnap.exists()) return;
       const userData = userSnap.data();
-
-      // 2. Check if this user was referred by someone
       const referredBy = userData.referredBy;
-      if (!referredBy) return;
 
-      // 3. Find a pending referral for this user/referrer pair
-      const refSnap = await getDocs(
-        query(
-          collection(db, "referrals"),
-          where("referrerId", "==", referredBy),
-          where("referredId", "==", order.userId),
-          where("status", "==", "pending")
-        )
-      );
-      if (refSnap.empty) return;
+      // --- Referral Reward (if any) ---
+      if (referredBy) {
+        const refSnap = await getDocs(
+          query(collection(db, "referrals"),
+            where("referrerId", "==", referredBy),
+            where("referredId", "==", order.userId),
+            where("status", "==", "pending"))
+        );
+        if (!refSnap.empty) {
+          const referralDoc = refSnap.docs[0];
+          const referralData = referralDoc.data();
+          const rewardAmount = referralData.rewardAmount || 20;
+          const rewardCoins = referralData.rewardCoins || 50;
 
-      const referralDoc = refSnap.docs[0];
-      const referralData = referralDoc.data();
-      const rewardAmount = referralData.rewardAmount || 20;
-      const rewardCoins = referralData.rewardCoins || 50;
-
-      // 4. Mark referral as completed
-      await updateDoc(doc(db, "referrals", referralDoc.id), {
-        status: "completed",
-        completedAt: serverTimestamp(),
-      });
-
-      // 5. Add wallet transaction
-      await addDoc(collection(db, "wallet_transactions"), {
-        userId: referredBy,
-        type: "referral_reward",
-        amount: rewardAmount,
-        coins: rewardCoins,
-        description: `Referral reward – user completed first order`,
-        orderId: order.id,
-        createdAt: serverTimestamp(),
-      });
-
-      // 6. Update referrer's stats & XP
-      await updateDoc(doc(db, "users", referredBy), {
-        walletBalance: increment(rewardAmount),
-        coinBalance: increment(rewardCoins),
-        totalReferrals: increment(1),
-        referralEarnings: increment(rewardAmount),
-        xp: increment(100),
-      });
-
-      // ✅ NOTIFY REFERRER
-      sendNotification(
-        referredBy,
-        "referral",
-        "🎉 Referral Reward Credited!",
-        `You earned ₹${rewardAmount} + ${rewardCoins} coins because your referral completed their first order.`,
-        "/dashboard/referrals"
-      );
-
-      // 7. Tier upgrade
-      const updatedUserSnap = await getDoc(doc(db, "users", referredBy));
-      const totalRefs = updatedUserSnap.data().totalReferrals || 0;
-      let newTier = "bronze";
-      if (totalRefs >= 15) newTier = "gold";
-      else if (totalRefs >= 5) newTier = "silver";
-      await updateDoc(doc(db, "users", referredBy), { referralTier: newTier });
-
-      // 8. Pyramid bonus (grand referrer)
-      if (userData.referredBy) {
-        const grandReferrerId = userData.referredBy;
-        if (grandReferrerId) {
-          await updateDoc(doc(db, "users", grandReferrerId), {
-            coinBalance: increment(5),
-            referralEarnings: increment(5),
-            xp: increment(10),
+          // Mark referral completed
+          await updateDoc(doc(db, "referrals", referralDoc.id), {
+            status: "completed",
+            completedAt: serverTimestamp(),
           });
+
+          // Wallet transaction for referrer
           await addDoc(collection(db, "wallet_transactions"), {
-            userId: grandReferrerId,
+            userId: referredBy,
             type: "referral_reward",
-            amount: 0,
-            coins: 5,
-            description: "Pyramid bonus for grand referral",
+            amount: rewardAmount,
+            coins: rewardCoins,
+            description: "Referral reward – user completed first order",
+            orderId: order.id,
             createdAt: serverTimestamp(),
           });
 
-          // ✅ NOTIFY GRAND REFERRER
-          sendNotification(
-            grandReferrerId,
-            "referral",
-            "🎁 Pyramid Bonus!",
-            "You received 5 coins because someone you referred made a successful referral.",
-            "/dashboard/referrals"
-          );
+          // Update referrer stats + XP
+          await updateDoc(doc(db, "users", referredBy), {
+            walletBalance: increment(rewardAmount),
+            coinBalance: increment(rewardCoins),
+            totalReferrals: increment(1),
+            referralEarnings: increment(rewardAmount),
+            xp: increment(100),
+          });
+
+          // Tier upgrade for referrer
+          const updatedUserSnap = await getDoc(doc(db, "users", referredBy));
+          const totalRefs = updatedUserSnap.data().totalReferrals || 0;
+          let newTier = "bronze";
+          if (totalRefs >= 15) newTier = "gold";
+          else if (totalRefs >= 5) newTier = "silver";
+          await updateDoc(doc(db, "users", referredBy), { referralTier: newTier });
+
+          // 🔔 Notification to referrer
+          sendNotification(referredBy, "referral", "Referral Reward",
+            `You earned ₹${rewardAmount} and ${rewardCoins} coins for a successful referral.`,
+            "/dashboard/referrals");
+
+          // 🏆 Achievement: ten_referrals for referrer
+          if (totalRefs >= 10) {
+            await unlockAchievement(referredBy, "ten_referrals");
+          }
+
+          // Pyramid bonus for grand referrer
+          const grandReferrerId = userData.referredBy;
+          if (grandReferrerId) {
+            await updateDoc(doc(db, "users", grandReferrerId), {
+              coinBalance: increment(5),
+              referralEarnings: increment(5),
+              xp: increment(10),
+            });
+            await addDoc(collection(db, "wallet_transactions"), {
+              userId: grandReferrerId,
+              type: "referral_reward",
+              amount: 0,
+              coins: 5,
+              description: "Pyramid bonus for grand referral",
+              createdAt: serverTimestamp(),
+            });
+            sendNotification(grandReferrerId, "referral", "Bonus Coins",
+              "You received 5 bonus coins from a grand referral.", "/dashboard/referrals");
+          }
         }
       }
 
-      toast.success(`Referral reward of ₹${rewardAmount} + ${rewardCoins} coins credited!`);
+      // 🔔 Notification to buyer (order delivered)
+      sendNotification(order.userId, "order", "Order Delivered",
+        `Your order #${order.id.slice(0, 8)} has been delivered.`,
+        "/dashboard/orders");
+
+      // 🏆 Order-based Achievements for buyer
+      const buyerOrdersSnap = await getDocs(query(collection(db, "orders"),
+        where("userId", "==", order.userId),
+        where("status", "in", ["delivered", "confirmed", "paid"])));
+      const buyerOrderCount = buyerOrdersSnap.size;
+      if (buyerOrderCount === 1) {
+        await unlockAchievement(order.userId, "first_order");
+      }
+      if (buyerOrderCount >= 5) {
+        await unlockAchievement(order.userId, "five_orders");
+      }
+
     } catch (error) {
-      console.error("Referral reward processing failed:", error);
+      console.error("Referral/achievement processing failed:", error);
     }
   };
 
@@ -167,24 +207,13 @@ export default function AdminOrders() {
     try {
       await updateDoc(doc(db, "orders", orderId), { status: newStatus });
       toast.success("Status updated");
-
       const updatedOrders = orders.map(o => o.id === orderId ? { ...o, status: newStatus } : o);
       setOrders(updatedOrders);
 
+      // Process referral & achievements if status now is delivered
       const orderToProcess = updatedOrders.find(o => o.id === orderId);
       if (orderToProcess) {
         await processReferralReward(orderToProcess);
-      }
-
-      // ✅ Optional: notify customer on status change
-      if (orderToProcess?.userId) {
-        sendNotification(
-          orderToProcess.userId,
-          "order",
-          `📦 Order ${newStatus}`,
-          `Your order #${orderId.slice(0,8)} is now ${newStatus}.`,
-          "/dashboard/orders"
-        );
       }
     } catch (err) {
       toast.error("Failed to update status");
@@ -210,13 +239,11 @@ export default function AdminOrders() {
         {orders.map(order => (
           <div key={order.id} className="card">
             <p className="font-semibold">Order #{order.id.slice(0, 8)}</p>
-
             {order.address && (
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 <UserIcon /> {order.address.name} &nbsp;|&nbsp; <PhoneIcon /> {order.address.phone}
               </p>
             )}
-
             <p>Total: ₹{order.total}</p>
             <p>Status: {order.status}</p>
             <p>Items: {order.items?.length || 0}</p>
@@ -229,7 +256,10 @@ export default function AdminOrders() {
                 onChange={e => setTrackingInput({ ...trackingInput, [order.id]: e.target.value })}
                 className="input-field flex-grow"
               />
-              <button onClick={() => saveTrackingUrl(order.id)} className="btn-gradient whitespace-nowrap flex items-center gap-1">
+              <button
+                onClick={() => saveTrackingUrl(order.id)}
+                className="btn-gradient whitespace-nowrap flex items-center gap-1"
+              >
                 <SaveIcon /> Save Link
               </button>
             </div>
