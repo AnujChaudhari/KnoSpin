@@ -5,7 +5,7 @@ import { doc, getDoc, updateDoc, addDoc, collection, serverTimestamp, increment 
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "react-hot-toast";
 
-const rewards = [5, 10, 20, 50, 100, 5, 10, 20]; // coins
+const rewards = [5, 10, 20, 50, 100, 5, 10, 20]; // possible coin rewards
 
 export default function SpinWheel() {
   const { user } = useAuth();
@@ -16,7 +16,7 @@ export default function SpinWheel() {
   const [userXp, setUserXp] = useState(0);
   const [userCoins, setUserCoins] = useState(0);
 
-  // Fetch user's current level, XP, and coins on mount
+  // On mount, fetch user's current level, XP, coins and today's spin status
   useEffect(() => {
     if (!user) return;
     const fetchUserData = async () => {
@@ -47,20 +47,21 @@ export default function SpinWheel() {
       setSpinning(false);
       setSpinUsed(true);
 
-      // Update user document: coins, XP, last spin date
       const userRef = doc(db, "users", user.uid);
+
+      // Update coins, XP, and last spin date
       await updateDoc(userRef, {
         coinBalance: increment(win),
-        xp: increment(5),          // ✅ 5 XP per spin
+        xp: increment(5),               // ✅ 5 XP per spin
         lastSpinDate: new Date().toDateString(),
       });
 
-      // Recalculate level based on new XP
+      // Fetch updated document to recalculate level
       const updatedSnap = await getDoc(userRef);
       if (updatedSnap.exists()) {
         const data = updatedSnap.data();
         const newXp = data.xp || 0;
-        const newLevel = Math.floor(Math.sqrt(newXp / 100));
+        const newLevel = Math.floor(Math.sqrt(newXp / 100)); // level = floor(sqrt(xp/100))
         if (newLevel > (data.level || 1)) {
           await updateDoc(userRef, { level: newLevel });
           toast.success(`🎉 Level Up! You are now Level ${newLevel}!`);
@@ -70,7 +71,7 @@ export default function SpinWheel() {
         setUserCoins(data.coinBalance || 0);
       }
 
-      // Record transaction
+      // Record transaction in wallet
       await addDoc(collection(db, "wallet_transactions"), {
         userId: user.uid,
         type: "admin_bonus",
@@ -88,7 +89,7 @@ export default function SpinWheel() {
     <div className="card text-center max-w-sm mx-auto">
       <h3 className="font-bold text-lg mb-4">🎡 Daily Spin & Win</h3>
 
-      {/* Level & XP Display */}
+      {/* User stats: Level, XP, Coins */}
       <div className="flex justify-center items-center gap-4 mb-4">
         <div className="bg-purple-100 dark:bg-purple-900/30 px-3 py-1 rounded-full text-sm font-bold text-purple-700 dark:text-purple-300">
           Lv. {userLevel}
