@@ -29,10 +29,10 @@ const AuthContext = createContext();
 
 export const useAuth = () => useContext(AuthContext);
 
-// Admin emails jinhe email verification ki zaroorat nahi
-const ADMIN_EMAILS = ["kc812213@gmail.com"]; // 🔁 apna admin email dalen
+// एडमिन ईमेल जिन्हें ईमेल वेरिफ़िकेशन की ज़रूरत नहीं
+const ADMIN_EMAILS = ["kc812213@gmail.com"];
 
-// Generate a random 6‑character uppercase referral code
+// 6-अक्षर का रेफ़रल कोड बनाएँ
 function generateReferralCode() {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
 }
@@ -42,15 +42,14 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
 
-  // ---------- check if current user is admin ----------
+  // ---------- एडमिन स्टेटस चेक ----------
   async function checkAdmin(uid) {
     if (!uid) {
       setIsAdmin(false);
       return;
     }
     try {
-      const docRef = doc(db, "admins", uid);
-      const snap = await getDoc(docRef);
+      const snap = await getDoc(doc(db, "admins", uid));
       setIsAdmin(snap.exists());
     } catch (error) {
       console.error("Admin check failed:", error);
@@ -58,23 +57,22 @@ export function AuthProvider({ children }) {
     }
   }
 
-  // ---------- ensure Firestore user document exists (with gamification fields) ----------
+  // ---------- यूज़र डॉक्युमेंट अपने आप बनाएँ (गैमिफ़िकेशन फ़ील्ड्स के साथ) ----------
   async function ensureUserDocument(currentUser) {
     if (!currentUser) return;
-    const userDocRef = doc(db, "users", currentUser.uid);
-    const snap = await getDoc(userDocRef);
+    const userRef = doc(db, "users", currentUser.uid);
+    const snap = await getDoc(userRef);
     if (!snap.exists()) {
-      // Create brand new user document with defaults + signup bonus
-      await setDoc(userDocRef, {
+      await setDoc(userRef, {
         email: currentUser.email,
         referralCode: generateReferralCode(),
         walletBalance: 0,
-        coinBalance: 10,            // ✅ signup bonus
+        coinBalance: 10,            // साइनअप बोनस
         totalReferrals: 0,
         referralEarnings: 0,
         referralTier: "bronze",
-        xp: 50,                     // ✅ starting XP
-        level: 1,                   // ✅ starting level
+        xp: 50,                     // शुरुआती XP
+        level: 1,
         achievements: [],
         dailyStreak: 0,
         referralStreak: 0,
@@ -88,7 +86,7 @@ export function AuthProvider({ children }) {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
-        await ensureUserDocument(currentUser);   // ✅ auto‑create user doc with gamification fields
+        await ensureUserDocument(currentUser);
         await checkAdmin(currentUser.uid);
       } else {
         setIsAdmin(false);
@@ -98,28 +96,28 @@ export function AuthProvider({ children }) {
     return unsubscribe;
   }, []);
 
-  // ---------- SIGNUP with referral (pyramid bonus logic included) ----------
+  // ---------- साइनअप (रेफ़रल + पिरामिड बोनस ट्रैकिंग) ----------
   const signup = async (email, password, referralCodeUsed = null) => {
-    // 1. Firebase Auth se account banao
+    // 1. Firebase Auth खाता बनाएँ
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const newUser = userCredential.user;
 
-    // 2. Email verification bhejo
+    // 2. ईमेल वेरिफ़िकेशन भेजें
     await sendEmailVerification(newUser);
 
-    // 3. Unique referral code generate karo
+    // 3. अपना रेफ़रल कोड बनाएँ
     const myReferralCode = generateReferralCode();
 
-    // 4. Firestore mein user document taiyaar karo (with signup bonus)
+    // 4. Firestore में यूज़र दस्तावेज़ तैयार करें
     const userData = {
       email: newUser.email,
       referralCode: myReferralCode,
       walletBalance: 0,
-      coinBalance: 10,             // ✅ signup bonus coins
+      coinBalance: 10,          // साइनअप बोनस
       totalReferrals: 0,
       referralEarnings: 0,
       referralTier: "bronze",
-      xp: 50,                      // ✅ initial XP
+      xp: 50,                   // शुरुआती XP
       level: 1,
       achievements: [],
       dailyStreak: 0,
@@ -128,50 +126,45 @@ export function AuthProvider({ children }) {
       createdAt: serverTimestamp(),
     };
 
-    // 5. Agar kisi ne referral code use kiya hai toh process karo
+    // 5. अगर रेफ़रल कोड इस्तेमाल किया गया है
     if (referralCodeUsed) {
       const usersRef = collection(db, "users");
       const q = query(usersRef, where("referralCode", "==", referralCodeUsed));
-      const querySnapshot = await getDocs(q);
+      const snap = await getDocs(q);
 
-      if (!querySnapshot.empty) {
-        const referrerDoc = querySnapshot.docs[0];
+      if (!snap.empty) {
+        const referrerDoc = snap.docs[0];
         const referrerId = referrerDoc.id;
         const referrerData = referrerDoc.data();
 
-        // Record who referred this user
+        // नए यूज़र को बताएँ कि किसने रेफ़र किया
         userData.referredBy = referrerId;
 
-        // Create a referral record (pending – will complete after order delivery)
+        // रेफ़रल दस्तावेज़ बनाएँ (पूरा होने पर रिवॉर्ड मिलेगा)
         await addDoc(collection(db, "referrals"), {
           referrerId: referrerId,
           referredId: newUser.uid,
           referralCode: referralCodeUsed,
           status: "pending",
-          rewardAmount: 20,        // ₹20 per successful referral
-          rewardCoins: 50,        // ✅ 50 coins to referrer on delivery
-          pyramidRewardGiven: false,  // for tracking pyramid bonus
+          rewardAmount: 20,
+          rewardCoins: 50,          // रेफ़रर को 50 coins
+          pyramidRewardGiven: false,
           createdAt: serverTimestamp(),
           completedAt: null,
         });
 
-        // ✅ Pyramid bonus: agar referrer khud kisi aur se referred tha,
-        // to original referrer ko 5 coins extra (one level deep)
+        // पिरामिड बोनस ट्रैकिंग: अगर रेफ़रर खुद किसी का रेफ़र है
         if (referrerData.referredBy) {
           const originalReferrerId = referrerData.referredBy;
-          // We'll store a second referral record or just update a field.
-          // To keep it simple, we directly award 5 coins to the original referrer now
-          // (but only after the current referral completes? User said "jab complete ho jaye".
-          // We'll handle that in order processing. For now, we just mark a pending pyramid reward.)
-          // We'll add a field to the referral doc: "pyramidReferrerId"
+          // पिरामिड बोनस के लिए अलग रेफ़रल रिकॉर्ड (5 coins)
           await addDoc(collection(db, "referrals"), {
             referrerId: originalReferrerId,
             referredId: newUser.uid,
             referralCode: referralCodeUsed,
             status: "pending",
             rewardAmount: 0,
-            rewardCoins: 5,         // ✅ pyramid bonus 5 coins
-            isPyramid: true,        // distinguish pyramid reward
+            rewardCoins: 5,         // पिरामिड बोनस
+            isPyramid: true,
             originalReferrer: referrerId,
             createdAt: serverTimestamp(),
             completedAt: null,
@@ -180,25 +173,25 @@ export function AuthProvider({ children }) {
       }
     }
 
-    // 6. Firestore mein user document save karo
+    // 6. Firestore में यूज़र दस्तावेज़ सेव करें
     await setDoc(doc(db, "users", newUser.uid), userData);
 
-    // 7. User ko batado aur signout kardo (verification ke liye)
+    // 7. सफलता संदेश और साइन आउट
     toast.success("Account created! Please verify your email before login.");
     await signOut(auth);
     return userCredential;
   };
 
-  // ---------- LOGIN (email verified or admin) ----------
+  // ---------- लॉगिन (एडमिन / वेरिफ़ाइड यूज़र) ----------
   const login = async (email, password) => {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
 
-    // Admin emails ko verification ki zaroorat nahi
+    // एडमिन ईमेल को वेरिफ़िकेशन से छूट
     if (ADMIN_EMAILS.includes(email)) {
       return userCredential;
     }
 
-    // Aam user ke liye email verified hona zaroori hai
+    // आम यूज़र के लिए ईमेल वेरिफ़िकेशन अनिवार्य
     if (!userCredential.user.emailVerified) {
       toast.error("Please verify your email first. Check your inbox.");
       await signOut(auth);
@@ -207,13 +200,13 @@ export function AuthProvider({ children }) {
     return userCredential;
   };
 
-  // ---------- LOGOUT ----------
+  // ---------- लॉगआउट ----------
   const logout = () => signOut(auth);
 
-  // ---------- GOOGLE LOGIN (no referral needed here) ----------
+  // ---------- गूगल लॉगिन ----------
   const googleLogin = () => signInWithPopup(auth, googleProvider);
 
-  // ---------- PASSWORD RESET ----------
+  // ---------- पासवर्ड रीसेट ----------
   const resetPassword = (email) => sendPasswordResetEmail(auth, email);
 
   const value = {
