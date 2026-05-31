@@ -7,7 +7,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import {
   addDoc, collection, serverTimestamp, doc, getDoc,
-  updateDoc, increment, getDocs, query, where, orderBy, limit
+  updateDoc, increment, getDocs, query, where, orderBy, limit, setDoc
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { loadRazorpay } from "@/lib/razorpay";
@@ -75,7 +75,7 @@ export default function CheckoutPage() {
 
   // Determine if cart contains any digital product
   const hasDigitalProduct = cart.some(item => item.isDigital);
-  // Only when the cart is entirely digital, coins can be used
+  // Coins are only allowed when the cart is entirely digital
   const allDigital = cart.every(item => item.isDigital);
   const coinsAllowed = allDigital && (userProfile?.coinBalance ?? 0) > 0;
   const coinDiscount = useCoins ? Math.min(coinsToUse, userProfile?.coinBalance ?? 0) : 0;
@@ -123,22 +123,76 @@ export default function CheckoutPage() {
       });
     }
 
-    // Common email parameters
-    const emailParams = {
-      ...orderData,
-      orderId: "", // will set after order creation
-      total: finalTotal,
-      address_name: address.name,
-      address_phone: address.phone,
-      address_street: address.street,
-      address_city: address.city,
-      address_pincode: address.pincode,
-      to_email: user.email,
-      to_name: address.name,
-      items: cart.map(item => ({
-        ...item,
-        subtotal: (item.price * item.quantity).toFixed(2)
-      })),
+    // Common function to finalize order after payment (or COD)
+    const finalizeOrder = async (paymentDetails = {}) => {
+      // Create order document
+      const docRef = await addDoc(collection(db, "orders"), {
+        ...orderData,
+        ...paymentDetails,
+      });
+
+      // Update coin transaction with order ID if exists
+      if (useCoins && coinDiscount > 0) {
+        const txSnap = await getDocs(query(
+          collection(db, "wallet_transactions"),
+          where("userId", "==", user.uid),
+          where("orderId", "==", ""),
+          orderBy("createdAt", "desc"),
+          limit(1)
+        ));
+        if (!txSnap.empty) {
+          await updateDoc(doc(db, "wallet_transactions", txSnap.docs[0].id), { orderId: docRef.id });
+        }
+      }
+
+      // Send emails and notifications
+      const emailParams = {
+        ...orderData,
+        orderId: docRef.id,
+        total: finalTotal,
+        address_name: address.name,
+        address_phone: address.phone,
+        address_street: address.street,
+        address_city: address.city,
+        address_pincode: address.pincode,
+        to_email: user.email,
+        to_name: address.name,
+        items: cart.map(item => ({
+          ...item,
+          subtotal: (item.price * item.quantity).toFixed(2)
+        })),
+      };
+      sendOrderConfirmation(emailParams).catch(err => console.error("EmailJS:", err));
+      sendOrderConfirmationViaResend(emailParams).catch(err => console.error("Resend:", err));
+      sendNotification(user.uid, "order", "Order Placed", `Your order #${docRef.id} has been placed. Total: ₹${finalTotal}`, "/dashboard/orders");
+
+      // Generate digital download tokens if any
+      let tokenParam = "";
+      const digitalItems = cart.filter(item => item.isDigital);
+      if (digitalItems.length > 0) {
+        const tokens = [];
+        for (const item of digitalItems) {
+          const token = Math.random().toString(36).substring(2) + Date.now().toString(36);
+          // Save token info in downloads collection
+          await setDoc(doc(db, "downloads", token), {
+            userId: user.uid,
+            productId: item.productId,
+            productName: item.name,
+            downloadCount: 0,
+            downloadLimit: item.downloadLimit || 5,
+            digitalFileUrl: item.digitalFileUrl || null,
+            digitalUrl: item.digitalUrl || null,
+            orderId: docRef.id,
+            createdAt: serverTimestamp(),
+          });
+          tokens.push(`${encodeURIComponent(item.name)}:${token}`);
+        }
+        tokenParam = tokens.join(',');
+      }
+
+      clearCart();
+      const redirectUrl = `/order-confirmation?id=${docRef.id}${tokenParam ? `&tokens=${encodeURIComponent(tokenParam)}` : ''}`;
+      router.push(redirectUrl);
     };
 
     // Razorpay flow
@@ -167,34 +221,11 @@ export default function CheckoutPage() {
             });
             const verifyData = await verifyRes.json();
             if (verifyData.success) {
-              const docRef = await addDoc(collection(db, "orders"), {
-                ...orderData,
+              await finalizeOrder({
                 paymentId: response.razorpay_payment_id,
                 paymentStatus: "paid",
               });
-
-              // Update coin transaction with order ID
-              if (useCoins && coinDiscount > 0) {
-                const txSnap = await getDocs(query(
-                  collection(db, "wallet_transactions"),
-                  where("userId", "==", user.uid),
-                  where("orderId", "==", ""),
-                  orderBy("createdAt", "desc"),
-                  limit(1)
-                ));
-                if (!txSnap.empty) {
-                  await updateDoc(doc(db, "wallet_transactions", txSnap.docs[0].id), { orderId: docRef.id });
-                }
-              }
-
-              emailParams.orderId = docRef.id;
-              sendOrderConfirmation(emailParams).catch(err => console.error("EmailJS:", err));
-              sendOrderConfirmationViaResend(emailParams).catch(err => console.error("Resend:", err));
-              sendNotification(user.uid, "order", "Order Placed", `Your order #${docRef.id} has been placed. Total: ₹${finalTotal}`, "/dashboard/orders");
-
-              clearCart();
               toast.success("Payment successful!");
-              router.push(`/order-confirmation?id=${docRef.id}`);
             } else {
               toast.error("Payment verification failed");
             }
@@ -208,33 +239,9 @@ export default function CheckoutPage() {
         console.error(err);
       }
     } else {
-      // COD flow (only physical products)
-      const docRef = await addDoc(collection(db, "orders"), {
-        ...orderData,
-        paymentStatus: "pending",
-      });
-
-      if (useCoins && coinDiscount > 0) {
-        const txSnap = await getDocs(query(
-          collection(db, "wallet_transactions"),
-          where("userId", "==", user.uid),
-          where("orderId", "==", ""),
-          orderBy("createdAt", "desc"),
-          limit(1)
-        ));
-        if (!txSnap.empty) {
-          await updateDoc(doc(db, "wallet_transactions", txSnap.docs[0].id), { orderId: docRef.id });
-        }
-      }
-
-      emailParams.orderId = docRef.id;
-      sendOrderConfirmation(emailParams).catch(err => console.error("EmailJS:", err));
-      sendOrderConfirmationViaResend(emailParams).catch(err => console.error("Resend:", err));
-      sendNotification(user.uid, "order", "Order Placed", `Your COD order #${docRef.id} has been placed. Total: ₹${finalTotal}`, "/dashboard/orders");
-
-      clearCart();
+      // COD flow
+      await finalizeOrder({ paymentStatus: "pending" });
       toast.success("Order placed successfully!");
-      router.push(`/order-confirmation?id=${docRef.id}`);
     }
   };
 
