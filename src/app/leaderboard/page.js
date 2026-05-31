@@ -38,14 +38,12 @@ export default function LeaderboardPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // बिना orderBy के, limit के साथ फ़ेच करें
         const q = query(collection(db, "users"), limit(50));
         const snap = await getDocs(q);
         let users = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        // क्लाइंट-साइड सॉर्ट (XP के हिसाब से घटते क्रम में)
         users.sort((a, b) => (b.xp || 0) - (a.xp || 0));
         users = users.filter(u => (u.xp || 0) > 0 || (u.totalReferrals || 0) > 0);
-        users = users.slice(0, 20); // top 20
+        users = users.slice(0, 20);
         setTopUsers(users);
       } catch (error) {
         console.error("Leaderboard fetch error:", error);
