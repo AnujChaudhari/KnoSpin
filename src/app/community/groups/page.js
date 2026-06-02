@@ -3,10 +3,10 @@ export const dynamic = 'force-dynamic';
 
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { collection, getDocs } from "firebase/firestore";
 import { useAuth } from "@/context/AuthContext";
 import Link from "next/link";
-import { HiSearch, HiPlus, HiUsers, HiLockClosed, HiGlobe } from "react-icons/hi";
+import { HiSearch, HiPlus, HiLockClosed, HiGlobe } from "react-icons/hi";
 
 /* ────── Premium SVG Icons ────── */
 const GroupIcon = () => (
@@ -37,7 +37,6 @@ export default function GroupsPage() {
     const fetchGroups = async () => {
       const snap = await getDocs(collection(db, "groups"));
       const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      // Client‑side sort – newest first
       list.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
       setGroups(list);
       setLoading(false);
@@ -45,7 +44,6 @@ export default function GroupsPage() {
     fetchGroups();
   }, []);
 
-  // Extract unique cities/states for filters
   const cities = [...new Set(groups.map(g => g.city).filter(Boolean))];
   const states = [...new Set(groups.map(g => g.state).filter(Boolean))];
 
@@ -69,7 +67,8 @@ export default function GroupsPage() {
     <div className="max-w-4xl mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Community Groups 👥</h1>
-        {user?.studentVerified && (
+        {/* ✅ All logged-in users can create groups */}
+        {user && (
           <Link href="/community/groups/create" className="btn-gradient flex items-center gap-2">
             <HiPlus /> Create Group
           </Link>
@@ -101,7 +100,7 @@ export default function GroupsPage() {
       {filtered.length === 0 && (
         <div className="text-center py-20">
           <GroupIcon />
-          <p className="text-gray-500 mt-4">No groups found. {user?.studentVerified ? "Create one!" : "Get verified to create groups."}</p>
+          <p className="text-gray-500 mt-4">No groups found. {user ? "Create one!" : "Login to create groups."}</p>
         </div>
       )}
 
