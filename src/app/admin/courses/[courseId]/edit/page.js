@@ -9,6 +9,7 @@ import { uploadToCloudinary } from "@/lib/cloudinary";
 import { toast } from "react-hot-toast";
 import CourseForm from "@/components/admin/CourseForm";
 import LessonForm from "@/components/admin/LessonForm";
+import QuestionForm from "@/components/admin/QuestionForm";
 
 export default function EditCoursePage() {
   const router = useRouter();
@@ -16,7 +17,9 @@ export default function EditCoursePage() {
   const courseId = params.courseId;
   const [course, setCourse] = useState(null);
   const [lessons, setLessons] = useState([]);
+  const [questions, setQuestions] = useState([]);
   const [showLessonForm, setShowLessonForm] = useState(false);
+  const [showQuestionForm, setShowQuestionForm] = useState(false);
   const [editingLesson, setEditingLesson] = useState(null);
 
   useEffect(() => {
@@ -39,8 +42,18 @@ export default function EditCoursePage() {
     setLessons(list);
   };
 
+  const fetchQuestions = async () => {
+    const snap = await getDocs(collection(db, "courses", courseId, "questions"));
+    const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    list.sort((a, b) => (a.order || 0) - (b.order || 0));
+    setQuestions(list);
+  };
+
   useEffect(() => {
-    if (courseId) fetchLessons();
+    if (courseId) {
+      fetchLessons();
+      fetchQuestions();
+    }
   }, [courseId]);
 
   const handleCourseUpdate = async (formData, thumbnailFile) => {
@@ -62,12 +75,11 @@ export default function EditCoursePage() {
 
   // Lesson handlers
   const handleAddLesson = async (lessonData) => {
-    // Determine next order value
     const maxOrder = lessons.reduce((max, l) => Math.max(max, l.order || 0), 0);
     await addDoc(collection(db, "courses", courseId, "lessons"), {
       ...lessonData,
       order: maxOrder + 1,
-      isCoursePublished: course.isPublished, // sync with course
+      isCoursePublished: course.isPublished,
     });
     toast.success("Lesson added");
     setShowLessonForm(false);
@@ -92,9 +104,24 @@ export default function EditCoursePage() {
     }
   };
 
-  const reorderLessons = async (fromIndex, toIndex) => {
-    // Simple reorder: update orders of all lessons after drag-and-drop (omitted for brevity, can be implemented with a button)
-    // For now, we'll just show the order and let admin manually edit.
+  // Question handlers
+  const handleAddQuestion = async (questionData) => {
+    const maxOrder = questions.reduce((max, q) => Math.max(max, q.order || 0), 0);
+    await addDoc(collection(db, "courses", courseId, "questions"), {
+      ...questionData,
+      order: maxOrder + 1,
+    });
+    toast.success("Question added");
+    setShowQuestionForm(false);
+    fetchQuestions();
+  };
+
+  const handleDeleteQuestion = async (qId) => {
+    if (confirm("Delete this question?")) {
+      await deleteDoc(doc(db, "courses", courseId, "questions", qId));
+      toast.success("Question deleted");
+      fetchQuestions();
+    }
   };
 
   if (!course) return <div className="p-4">Loading...</div>;
@@ -163,6 +190,41 @@ export default function EditCoursePage() {
                   Delete
                 </button>
               </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Questions Section */}
+      <div className="card">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-xl font-bold">Test Questions ({questions.length})</h3>
+          <button
+            onClick={() => setShowQuestionForm(true)}
+            className="btn-gradient text-sm flex items-center gap-1"
+          >
+            + Add Question
+          </button>
+        </div>
+
+        {showQuestionForm && (
+          <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-xl">
+            <h4 className="font-semibold mb-3">New Question</h4>
+            <QuestionForm
+              onSubmit={handleAddQuestion}
+              onCancel={() => setShowQuestionForm(false)}
+            />
+          </div>
+        )}
+
+        <div className="space-y-2">
+          {questions.map((q, idx) => (
+            <div key={q.id} className="p-3 bg-white dark:bg-gray-600 rounded-lg flex justify-between items-center">
+              <div className="flex-1">
+                <p className="font-medium">{idx+1}. {q.question}</p>
+                <p className="text-xs text-gray-500">Correct: {q.options[q.correct]}</p>
+              </div>
+              <button onClick={() => handleDeleteQuestion(q.id)} className="text-red-500 text-xs ml-4 hover:underline">Delete</button>
             </div>
           ))}
         </div>
