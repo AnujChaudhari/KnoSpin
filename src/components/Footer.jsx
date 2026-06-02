@@ -91,6 +91,7 @@ export default function Footer() {
             </h4>
             <ul className="text-sm space-y-3">
               <li><Link href="/" className="text-gray-600 dark:text-gray-300 hover:text-primary-600 transition">Home</Link></li>
+              <li><Link href="/courses">Courses</Link></li>
               <li><Link href="/products" className="text-gray-600 dark:text-gray-300 hover:text-primary-600 transition">All Products</Link></li>
               <li><Link href="/dashboard" className="text-gray-600 dark:text-gray-300 hover:text-primary-600 transition">My Account</Link></li>
               <li><Link href="/dashboard/referrals" className="text-gray-600 dark:text-gray-300 hover:text-primary-600 transition">Refer & Earn</Link></li>
