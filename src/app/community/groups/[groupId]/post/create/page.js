@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic';
 import { useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
-import { collection, addDoc, serverTimestamp, doc, getDoc } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { uploadToCloudinary } from "@/lib/cloudinary";
 import { compressImage } from "@/lib/compressImage";
 import { useAuth } from "@/context/AuthContext";
@@ -62,8 +62,10 @@ export default function CreatePostPage() {
   };
 
   const handleSubmit = async () => {
-    if (!user) { toast.error("Please login"); return; }
-    if (!user.studentVerified) { toast.error("Only verified students can post"); return; }
+    if (!user) {
+      toast.error("Please login");
+      return;
+    }
     const htmlContent = editorRef.current?.innerHTML;
     if (!htmlContent || htmlContent === '<br>' || htmlContent === '<p><br></p>') {
       toast.error("Please write something");
@@ -91,7 +93,10 @@ export default function CreatePostPage() {
       });
       toast.success("Post published!");
       router.push(`/community/groups/${groupId}`);
-    } catch (err) { console.error(err); toast.error("Failed to publish"); }
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to publish");
+    }
     setPosting(false);
   };
 
