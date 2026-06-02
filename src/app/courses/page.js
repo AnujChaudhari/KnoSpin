@@ -3,10 +3,10 @@ export const dynamic = 'force-dynamic';
 
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
-import { collection, query, where, getDocs, orderBy } from "firebase/firestore";
+import { collection, query, where, getDocs } from "firebase/firestore";
 import Link from "next/link";
 
-/* ────────── प्रीमियम SVG आइकॉन ────────── */
+/* ────────── प्रीमियम SVG आइकॉन (कोई बदलाव नहीं) ────────── */
 const SearchIcon = () => (
   <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
     <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
@@ -27,32 +27,24 @@ const BookOpenIcon = () => (
     <path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/>
   </svg>
 );
-const StarIcon = () => (
-  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.86L12 18.56l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-  </svg>
-);
 
 export default function CoursesPage() {
   const [courses, setCourses] = useState([]);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
-  const [priceFilter, setPriceFilter] = useState("all"); // "all", "free", "premium"
+  const [priceFilter, setPriceFilter] = useState("all");
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchCourses = async () => {
       try {
-        const q = query(
-          collection(db, "courses"),
-          where("isPublished", "==", true),
-          orderBy("createdAt", "desc")
-        );
+        const q = query(collection(db, "courses"), where("isPublished", "==", true));
         const snap = await getDocs(q);
         const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        // 🔽 क्लाइंट-साइड सॉर्ट (सबसे नया पहले)
+        list.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
         setCourses(list);
-        // Extract unique categories
         const cats = [...new Set(list.map(c => c.category).filter(Boolean))];
         setCategories(cats);
       } catch (err) {
@@ -63,7 +55,6 @@ export default function CoursesPage() {
     fetchCourses();
   }, []);
 
-  // फ़िल्टरिंग
   const filtered = courses.filter(c => {
     const matchSearch = c.title?.toLowerCase().includes(search.toLowerCase());
     const matchCategory = categoryFilter ? c.category === categoryFilter : true;
@@ -83,11 +74,9 @@ export default function CoursesPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
-      {/* हेडिंग */}
       <h1 className="text-3xl md:text-4xl font-bold mb-2">Explore Courses 📚</h1>
       <p className="text-gray-500 mb-8">Learn from expert instructors in Hindi & English</p>
 
-      {/* सर्च और फ़िल्टर */}
       <div className="flex flex-col sm:flex-row gap-4 mb-8">
         <div className="relative flex-grow">
           <span className="absolute left-3 top-3 text-gray-400"><SearchIcon /></span>
@@ -129,7 +118,6 @@ export default function CoursesPage() {
         </div>
       </div>
 
-      {/* कोर्स ग्रिड */}
       {filtered.length === 0 && (
         <div className="text-center py-20">
           <p className="text-2xl">😕</p>
@@ -146,7 +134,6 @@ export default function CoursesPage() {
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 onError={(e) => { e.target.src = "https://via.placeholder.com/400x200?text=Course+Image"; }}
               />
-              {/* प्राइस बैज */}
               <span className={`absolute top-2 right-2 text-xs font-bold px-2 py-1 rounded-full ${course.price === 0 ? 'bg-green-500 text-white' : 'bg-purple-500 text-white'}`}>
                 {course.price === 0 ? 'Free' : `₹${course.price}`}
               </span>
