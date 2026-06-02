@@ -1,31 +1,31 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, updateDoc, addDoc, collection, serverTimestamp, increment } from "firebase/firestore";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "react-hot-toast";
 import { unlockAchievement } from "@/lib/gamification";
 
-const rewards = [5, 10, 20, 50, 100, 5, 10, 20];
+const rewards = [5, 10, 20, 50, 100, 5, 10, 20]; // possible coin rewards
+const SEGMENT_COUNT = 8;
+const SEGMENT_ANGLE = 360 / SEGMENT_COUNT;
 
-// 🎡 प्रोफेशनल इनलाइन SVG व्हील आइकन
-const WheelIcon = ({ spinning }) => (
-  <svg
-    viewBox="0 0 100 100"
-    className={`w-20 h-20 transition-transform duration-300 ${spinning ? "animate-spin" : ""}`}
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="4"
-  >
-    {/* बाहरी रिंग */}
-    <circle cx="50" cy="50" r="42" strokeWidth="8" />
-    {/* अंदरूनी तीलियाँ (स्पोक्स) */}
-    <line x1="50" y1="8" x2="50" y2="92" />
-    <line x1="8" y1="50" x2="92" y2="50" />
-    <line x1="20" y1="20" x2="80" y2="80" />
-    <line x1="80" y1="20" x2="20" y2="80" />
-    {/* बीच का गोला */}
-    <circle cx="50" cy="50" r="10" fill="currentColor" />
+// रंग पट्टिका – हर सेगमेंट के लिए आकर्षक रंग
+const segmentColors = [
+  "#FF6B6B", // लाल-नारंगी
+  "#FECA57", // पीला
+  "#48DBFB", // हल्का नीला
+  "#FF9FF3", // गुलाबी
+  "#54A0FF", // गहरा नीला
+  "#5F27CD", // बैंगनी
+  "#00D2D3", // फ़िरोज़ी
+  "#1DD1A1", // हरा
+];
+
+// छोटा सा तीर (pointer)
+const Pointer = () => (
+  <svg className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-2 z-10" width="20" height="20" viewBox="0 0 20 20">
+    <polygon points="10,0 0,15 20,15" fill="#333" />
   </svg>
 );
 
@@ -38,6 +38,8 @@ export default function SpinWheel() {
   const [userXp, setUserXp] = useState(0);
   const [userCoins, setUserCoins] = useState(0);
   const [totalSpins, setTotalSpins] = useState(0);
+  const [rotation, setRotation] = useState(0); // वर्तमान कोण
+  const wheelRef = useRef(null);
 
   useEffect(() => {
     if (!user) return;
@@ -63,13 +65,25 @@ export default function SpinWheel() {
     setSpinning(true);
     setResult(null);
 
+    // रैंडम सेगमेंट चुनें
+    const randomSegmentIndex = Math.floor(Math.random() * SEGMENT_COUNT);
+    const win = rewards[randomSegmentIndex];
+
+    // कम से कम 5 पूरे चक्कर (1800 डिग्री) + चुने हुए सेगमेंट तक पहुँचने के लिए अतिरिक्त कोण
+    const fullSpins = 5 * 360;
+    const targetAngle = fullSpins + (SEGMENT_ANGLE * (SEGMENT_COUNT - randomSegmentIndex)) + Math.random() * SEGMENT_ANGLE;
+    const newRotation = rotation + targetAngle;
+
+    setRotation(newRotation);
+
+    // स्पिन समाप्त होने पर डेटा अपडेट करें (एनीमेशन के बाद)
     setTimeout(async () => {
-      const win = rewards[Math.floor(Math.random() * rewards.length)];
-      setResult(win);
       setSpinning(false);
+      setResult(win);
       setSpinUsed(true);
 
       const userRef = doc(db, "users", user.uid);
+
       await updateDoc(userRef, {
         coinBalance: increment(win),
         xp: increment(5),
@@ -107,14 +121,23 @@ export default function SpinWheel() {
       });
 
       toast.success(`You won ${win} coins! 🎉`);
-    }, 3000);
+    }, 5000); // एनीमेशन की अवधि (5 सेकंड)
   };
+
+  // conic-gradient स्ट्रिंग बनाएं – हर सेगमेंट को रंग और टेक्स्ट देना है
+  const gradientParts = segmentColors.map((color, index) => {
+    const start = index * SEGMENT_ANGLE;
+    const end = (index + 1) * SEGMENT_ANGLE;
+    return `${color} ${start}deg ${end}deg`;
+  });
+  const conicGradient = `conic-gradient(${gradientParts.join(", ")})`;
 
   return (
     <div className="card text-center max-w-sm mx-auto">
       <h3 className="font-bold text-lg mb-4">🎡 Daily Spin & Win</h3>
 
-      <div className="flex justify-center items-center gap-4 mb-4 flex-wrap">
+      {/* User stats */}
+      <div className="flex justify-center items-center gap-4 mb-6 flex-wrap">
         <div className="bg-purple-100 dark:bg-purple-900/30 px-3 py-1 rounded-full text-sm font-bold text-purple-700 dark:text-purple-300">
           Lv. {userLevel}
         </div>
@@ -129,13 +152,46 @@ export default function SpinWheel() {
         </div>
       </div>
 
-      {/* प्रोफेशनल SVG व्हील आइकन */}
-      <div className="mb-4 flex justify-center">
-        <WheelIcon spinning={spinning} />
+      {/* स्पिनर कंटेनर */}
+      <div className="relative w-60 h-60 mx-auto mb-4">
+        <Pointer />
+        <div
+          ref={wheelRef}
+          className="w-full h-full rounded-full border-4 border-white dark:border-gray-600 shadow-2xl"
+          style={{
+            background: conicGradient,
+            transform: `rotate(${rotation}deg)`,
+            transition: spinning ? "transform 5s cubic-bezier(0.15, 0.6, 0.3, 1)" : "none",
+          }}
+        >
+          {/* सेगमेंट लेबल – हर सेगमेंट के बीच में इनाम की राशि */}
+          {rewards.map((reward, index) => {
+            const angle = (index * SEGMENT_ANGLE) + (SEGMENT_ANGLE / 2);
+            const radian = (angle * Math.PI) / 180;
+            const x = 50 + 35 * Math.cos(radian);
+            const y = 50 + 35 * Math.sin(radian);
+            return (
+              <span
+                key={index}
+                className="absolute text-white font-bold text-xs drop-shadow-lg"
+                style={{
+                  left: `${x}%`,
+                  top: `${y}%`,
+                  transform: `translate(-50%, -50%) rotate(${angle}deg)`,
+                }}
+              >
+                {reward}
+              </span>
+            );
+          })}
+        </div>
+        {/* बीच का गोल बटन (वैकल्पिक) */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 bg-white dark:bg-gray-700 rounded-full shadow-inner"></div>
       </div>
 
+      {/* परिणाम संदेश */}
       {result && (
-        <div className="bg-green-100 dark:bg-green-900/30 p-3 rounded-xl mb-4">
+        <div className="bg-green-100 dark:bg-green-900/30 p-3 rounded-xl mb-4 animate-fade-in">
           <p className="text-2xl font-bold text-green-600">+{result} Coins!</p>
           <p className="text-xs text-green-700 mt-1">+5 XP</p>
         </div>
