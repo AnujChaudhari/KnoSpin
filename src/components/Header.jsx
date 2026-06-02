@@ -59,6 +59,7 @@ export default function Header() {
         <nav className="md:hidden overflow-hidden bg-white dark:bg-gray-800 border-t">
           <div className="flex flex-col p-4 space-y-3">
             <Link href="/" onClick={() => setMenuOpen(false)}>Home</Link>
+            <Link href="/courses" onClick={() => setMenuOpen(false)}>Courses</Link>
             <Link href="/products" onClick={() => setMenuOpen(false)}>All Products</Link>
             {user ? (
               <>
@@ -84,6 +85,7 @@ export default function Header() {
       {/* Desktop Menu */}
       <div className="hidden md:flex max-w-7xl mx-auto px-4 pb-2 gap-6 text-sm items-center">
         <Link href="/" className="hover:text-primary-600">Home</Link>
+        <Link href="/courses" className="hover:text-primary-600">Courses</Link>
         <Link href="/products" className="hover:text-primary-600">All Products</Link>
         {user ? (
           <>
