@@ -4,9 +4,10 @@ export const dynamic = 'force-dynamic';
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { db } from "@/lib/firebase";
-import { doc, getDoc, collection, query, orderBy, getDocs, addDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, updateDoc, increment, collection, query, where, getDocs, addDoc, serverTimestamp } from "firebase/firestore";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "react-hot-toast";
+import Link from "next/link";
 
 /* ────────── प्रीमियम SVG आइकॉन ────────── */
 const ClockIcon = () => (
@@ -37,56 +38,63 @@ const CheckIcon = () => (
     <polyline points="20 6 9 17 4 12"/>
   </svg>
 );
+const ArrowLeftIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+    <path d="M19 12H5m7-7l-7 7 7 7"/>
+  </svg>
+);
 
 export default function CourseDetailPage() {
   const params = useParams();
   const courseId = params.courseId;
   const { user } = useAuth();
+
   const [course, setCourse] = useState(null);
   const [lessons, setLessons] = useState([]);
   const [enrolled, setEnrolled] = useState(false);
   const [loading, setLoading] = useState(true);
   const [enrolling, setEnrolling] = useState(false);
 
+  // Fetch course + lessons + enrollment status
   useEffect(() => {
     if (!courseId) return;
+
     const fetchCourse = async () => {
       try {
         const courseSnap = await getDoc(doc(db, "courses", courseId));
-        if (courseSnap.exists()) {
-          const data = courseSnap.data();
-          if (!data.isPublished) {
-            toast.error("Course not available");
-            setLoading(false);
-            return;
-          }
-          setCourse({ id: courseSnap.id, ...data });
-
-          // Fetch lessons (subcollection)
-          const lessonsQuery = query(
-            collection(db, "courses", courseId, "lessons"),
-            orderBy("order", "asc")
-          );
-          const lessonsSnap = await getDocs(lessonsQuery);
-          const lessonsList = lessonsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-          setLessons(lessonsList);
-        } else {
+        if (!courseSnap.exists()) {
           toast.error("Course not found");
+          setLoading(false);
+          return;
         }
+        const data = courseSnap.data();
+        if (!data.isPublished) {
+          toast.error("Course not available");
+          setLoading(false);
+          return;
+        }
+        setCourse({ id: courseSnap.id, ...data });
+
+        // Fetch lessons subcollection (NO orderBy → client sort)
+        const lessonsSnap = await getDocs(collection(db, "courses", courseId, "lessons"));
+        const list = lessonsSnap.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .sort((a, b) => (a.order || 0) - (b.order || 0));
+        setLessons(list);
       } catch (err) {
         console.error(err);
         toast.error("Failed to load course");
       }
       setLoading(false);
     };
+
     fetchCourse();
   }, [courseId]);
 
-  // Check existing enrollment
+  // Check enrollment
   useEffect(() => {
     if (!user || !courseId) return;
-    const checkEnrollment = async () => {
-      // Client-side query – needs composite index (already created)
+    const check = async () => {
       const q = query(
         collection(db, "enrollments"),
         where("userId", "==", user.uid),
@@ -95,9 +103,10 @@ export default function CourseDetailPage() {
       const snap = await getDocs(q);
       if (!snap.empty) setEnrolled(true);
     };
-    checkEnrollment();
+    check();
   }, [user, courseId]);
 
+  // Free enrollment handler
   const handleFreeEnroll = async () => {
     if (!user) {
       toast.error("Please login to enroll");
@@ -117,7 +126,6 @@ export default function CourseDetailPage() {
         progress: 0,
         lastAccessedLessonId: "",
       });
-      // Increment totalStudents on course
       await updateDoc(doc(db, "courses", courseId), {
         totalStudents: increment(1)
       });
@@ -129,9 +137,9 @@ export default function CourseDetailPage() {
     setEnrolling(false);
   };
 
+  // Premium placeholder
   const handlePremiumBuy = () => {
     toast("Premium enrollment coming soon! 🚀", { icon: '💎' });
-    // बाद में चेकआउट पेज पर ले जाएँगे
   };
 
   if (loading) {
@@ -141,11 +149,16 @@ export default function CourseDetailPage() {
       </div>
     );
   }
+
   if (!course) return null;
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
-      {/* कोर्स हीरो */}
+      {/* Back link */}
+      <Link href="/courses" className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-primary-600 mb-6">
+        <ArrowLeftIcon /> Back to courses
+      </Link>
+
       <div className="grid md:grid-cols-2 gap-8 mb-10">
         <div>
           <img
@@ -161,6 +174,7 @@ export default function CourseDetailPage() {
             <span className="flex items-center gap-1"><UserIcon /> {course.instructor || "Instructor"}</span>
             <span className="flex items-center gap-1"><BookOpenIcon /> {course.totalStudents || 0} learners</span>
           </div>
+
           {course.price === 0 ? (
             <div className="flex items-center gap-2">
               <span className="text-3xl font-bold text-green-600">Free</span>
@@ -189,13 +203,15 @@ export default function CourseDetailPage() {
               </button>
             </div>
           )}
+
           <p className="text-gray-600 dark:text-gray-300 whitespace-pre-wrap">{course.description}</p>
         </div>
       </div>
 
-      {/* लेसन लिस्ट */}
+      {/* Lessons list */}
       <div className="card">
         <h2 className="text-2xl font-bold mb-4">Course Curriculum 📖</h2>
+        {lessons.length === 0 && <p className="text-gray-500">No lessons added yet.</p>}
         <div className="space-y-3">
           {lessons.map((lesson, idx) => (
             <div key={lesson.id} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-xl">
