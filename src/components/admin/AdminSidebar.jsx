@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 
-/* ── सभी आइकन इनलाइन SVG ── */
+/* ────── सभी आइकॉन इनलाइन SVG ────── */
 const HomeIcon = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>;
 const ProductsIcon = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>;
 const OrdersIcon = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>;
@@ -14,6 +14,15 @@ const ReferralsIcon = () => <svg className="w-5 h-5" fill="none" stroke="current
 const WalletIcon = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><circle cx="16" cy="12" r="2"/><path d="M2 10h4"/></svg>;
 const AnalyticsIcon = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>;
 const CoursesIcon = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>;
+
+// ✅ Verifications के लिए ShieldCheck Icon (पहले HiShieldCheck नहीं मिल रहा था)
+const ShieldCheckIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    <polyline points="9 12 11 14 15 10" />
+  </svg>
+);
+
 const MenuIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>;
 const CloseIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>;
 
@@ -28,6 +37,7 @@ const links = [
   { href: "/admin/wallet", label: "Wallet Control", icon: <WalletIcon /> },
   { href: "/admin/analytics", label: "Analytics", icon: <AnalyticsIcon /> },
   { href: "/admin/courses", label: "Courses", icon: <CoursesIcon /> },
+  { href: "/admin/verifications", label: "Verifications", icon: <ShieldCheckIcon /> },
 ];
 
 export default function AdminSidebar() {
@@ -36,17 +46,52 @@ export default function AdminSidebar() {
 
   return (
     <>
-      <button className="md:hidden fixed top-4 left-4 z-50 bg-primary-600 text-white p-2 rounded-full shadow-lg" onClick={() => setOpen(!open)}>
+      {/* Mobile Toggle Button */}
+      <button
+        className="md:hidden fixed top-4 left-4 z-50 bg-primary-600 text-white p-2 rounded-full shadow-lg"
+        onClick={() => setOpen(!open)}
+      >
         {open ? <CloseIcon /> : <MenuIcon />}
       </button>
-      {open && <div className="md:hidden fixed inset-0 bg-black/50 z-40" onClick={() => setOpen(false)} />}
-      <aside className={`fixed top-0 left-0 h-full w-64 bg-white dark:bg-gray-800 border-r p-6 z-40 transform transition-transform duration-200 ${open ? "translate-x-0" : "-translate-x-full"} md:translate-x-0 md:static md:h-screen overflow-y-auto`}>
-        <Link href="/" className="text-2xl font-bold text-primary-600 mb-8 block" onClick={() => setOpen(false)}>Quick Shop</Link>
+
+      {/* Overlay for mobile */}
+      {open && (
+        <div
+          className="md:hidden fixed inset-0 bg-black/50 z-40"
+          onClick={() => setOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside
+        className={`fixed top-0 left-0 h-full w-64 bg-white dark:bg-gray-800 border-r p-6 z-40 transform transition-transform duration-200 ${
+          open ? "translate-x-0" : "-translate-x-full"
+        } md:translate-x-0 md:static md:h-screen overflow-y-auto`}
+      >
+        {/* Logo / Brand */}
+        <Link
+          href="/"
+          className="text-2xl font-bold text-primary-600 mb-8 block"
+          onClick={() => setOpen(false)}
+        >
+          Quick Shop
+        </Link>
+
+        {/* Navigation Links */}
         <nav className="flex flex-col gap-3">
           {links.map(link => (
-            <Link key={link.href} href={link.href} onClick={() => setOpen(false)}
-              className={`flex items-center gap-3 p-3 rounded-lg transition ${pathname === link.href ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-600' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`}>
-              {link.icon} {link.label}
+            <Link
+              key={link.href}
+              href={link.href}
+              onClick={() => setOpen(false)}
+              className={`flex items-center gap-3 p-3 rounded-lg transition ${
+                pathname === link.href
+                  ? "bg-primary-100 dark:bg-primary-900/30 text-primary-600"
+                  : "hover:bg-gray-100 dark:hover:bg-gray-700"
+              }`}
+            >
+              {link.icon}
+              {link.label}
             </Link>
           ))}
         </nav>
