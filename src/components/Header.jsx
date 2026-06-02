@@ -60,6 +60,7 @@ export default function Header() {
           <div className="flex flex-col p-4 space-y-3">
             <Link href="/" onClick={() => setMenuOpen(false)}>Home</Link>
             <Link href="/courses" onClick={() => setMenuOpen(false)}>Courses</Link>
+            <Link href="/community/groups" onClick={() => setMenuOpen(false)}>Community</Link>
             <Link href="/products" onClick={() => setMenuOpen(false)}>All Products</Link>
             {user ? (
               <>
@@ -86,6 +87,7 @@ export default function Header() {
       <div className="hidden md:flex max-w-7xl mx-auto px-4 pb-2 gap-6 text-sm items-center">
         <Link href="/" className="hover:text-primary-600">Home</Link>
         <Link href="/courses" className="hover:text-primary-600">Courses</Link>
+        <Link href="/community/groups" className="hover:text-primary-600">Community</Link>
         <Link href="/products" className="hover:text-primary-600">All Products</Link>
         {user ? (
           <>
