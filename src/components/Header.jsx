@@ -5,7 +5,7 @@ import { useCart } from "@/context/CartContext";
 import Link from "next/link";
 import { HiMenu, HiX, HiShoppingCart, HiUser, HiLogout } from "react-icons/hi";
 import ThemeToggle from "./ThemeToggle";
-import NotificationBell from "./NotificationBell"; // ✅ वापस जोड़ा गया
+import NotificationBell from "./NotificationBell";
 
 export default function Header() {
   const { user, logout, isAdmin, loading } = useAuth();
@@ -17,12 +17,16 @@ export default function Header() {
     setMounted(true);
   }, []);
 
+  // लोडिंग स्टेट – लोगो और खाली जगह
   if (!mounted || loading) {
     return (
       <header className="glassmorphism sticky top-0 z-50 border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-          <Link href="/" className="text-2xl font-bold bg-gradient-to-r from-primary-600 to-purple-600 bg-clip-text text-transparent">
-            Quick Shop
+          <Link href="/" className="flex items-center gap-2">
+            <img src="/logo.jpg" alt="Quick Shop" className="h-7 w-auto" />
+            <span className="text-xl md:text-2xl font-bold bg-gradient-to-r from-primary-600 to-purple-600 bg-clip-text text-transparent">
+              Quick Shop
+            </span>
           </Link>
           <div className="w-6 h-6"></div>
         </div>
@@ -33,13 +37,22 @@ export default function Header() {
   return (
     <header className="glassmorphism sticky top-0 z-50 border-b border-gray-200 dark:border-gray-700">
       <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-        <Link href="/" className="text-2xl font-bold bg-gradient-to-r from-primary-600 to-purple-600 bg-clip-text text-transparent">
-          Quick Shop
+        {/* लोगो + टेक्स्ट */}
+        <Link href="/" className="flex items-center gap-2">
+          <img
+            src="/logo.jpg"
+            alt="Quick Shop"
+            className="h-7 md:h-8 w-auto"
+          />
+          <span className="text-xl md:text-2xl font-bold bg-gradient-to-r from-primary-600 to-purple-600 bg-clip-text text-transparent">
+            Quick Shop
+          </span>
         </Link>
 
+        {/* दाईं ओर आइकॉन */}
         <div className="flex items-center gap-4">
           <ThemeToggle />
-          <NotificationBell />  {/* ✅ बेल आइकन अब सक्रिय */}
+          <NotificationBell />
           <Link href="/cart" className="relative">
             <HiShoppingCart className="w-6 h-6" />
             {cart.length > 0 && (
@@ -54,7 +67,7 @@ export default function Header() {
         </div>
       </div>
 
-      {/* Mobile Menu */}
+      {/* मोबाइल मेन्यू */}
       {menuOpen && (
         <nav className="md:hidden overflow-hidden bg-white dark:bg-gray-800 border-t">
           <div className="flex flex-col p-4 space-y-3">
@@ -83,7 +96,7 @@ export default function Header() {
         </nav>
       )}
 
-      {/* Desktop Menu */}
+      {/* डेस्कटॉप मेन्यू */}
       <div className="hidden md:flex max-w-7xl mx-auto px-4 pb-2 gap-6 text-sm items-center">
         <Link href="/" className="hover:text-primary-600">Home</Link>
         <Link href="/courses" className="hover:text-primary-600">Courses</Link>
