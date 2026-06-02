@@ -15,11 +15,21 @@ const WalletIcon = () => <svg className="w-5 h-5" fill="none" stroke="currentCol
 const AnalyticsIcon = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>;
 const CoursesIcon = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>;
 
-// ✅ Verifications के लिए ShieldCheck Icon (पहले HiShieldCheck नहीं मिल रहा था)
+// ✅ Verifications के लिए ShieldCheck Icon
 const ShieldCheckIcon = () => (
   <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
     <polyline points="9 12 11 14 15 10" />
+  </svg>
+);
+
+// ✅ Community Groups के लिए UserGroup Icon (पिछली बार HiUserGroup नहीं मिल रहा था)
+const UserGroupIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+    <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+    <circle cx="9" cy="7" r="4" />
+    <path d="M23 21v-2a4 4 0 00-3-3.87" />
+    <path d="M16 3.13a4 4 0 010 7.75" />
   </svg>
 );
 
@@ -38,6 +48,7 @@ const links = [
   { href: "/admin/analytics", label: "Analytics", icon: <AnalyticsIcon /> },
   { href: "/admin/courses", label: "Courses", icon: <CoursesIcon /> },
   { href: "/admin/verifications", label: "Verifications", icon: <ShieldCheckIcon /> },
+  { href: "/admin/community/groups", label: "Community Groups", icon: <UserGroupIcon /> },
 ];
 
 export default function AdminSidebar() {
