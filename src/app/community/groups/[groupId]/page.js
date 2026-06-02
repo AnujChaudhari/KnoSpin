@@ -4,11 +4,11 @@ export const dynamic = 'force-dynamic';
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
-import { doc, getDoc, collection, getDocs, query, where, orderBy, addDoc, updateDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, collection, getDocs, addDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "react-hot-toast";
 import Link from "next/link";
-import { HiPlus, HiShare, HiClipboardCopy, HiTrash, HiPhotograph } from "react-icons/hi";
+import { HiPlus, HiShare, HiTrash } from "react-icons/hi";
 
 /* ────── Premium SVG Icons ────── */
 const GroupIcon = () => (
@@ -54,7 +54,7 @@ export default function GroupDetailPage() {
         if (!groupSnap.exists()) { toast.error("Group not found"); router.push("/community/groups"); return; }
         setGroup({ id: groupSnap.id, ...groupSnap.data() });
 
-        // Members count (client-side, but may be many; limit read? For small groups it's fine)
+        // Members count
         const membersSnap = await getDocs(collection(db, "groups", groupId, "members"));
         setMemberCount(membersSnap.size);
         if (user) {
@@ -76,7 +76,7 @@ export default function GroupDetailPage() {
 
   const handleJoin = async () => {
     if (!user) { toast.error("Please login"); return; }
-    if (!user.studentVerified) { toast.error("Only verified students can join"); return; }
+    // ✅ अब कोई student verification आवश्यक नहीं
     try {
       await addDoc(collection(db, "groups", groupId, "members"), {
         userId: user.uid,
