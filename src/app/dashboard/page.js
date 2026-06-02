@@ -8,7 +8,7 @@ import { useState, useEffect } from "react";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
-// Premium SVG Icons (same as before, plus BookOpen for courses)
+/* ────────── प्रीमियम SVG आइकॉन (अब GroupIcon सहित) ────────── */
 const OrderIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" className="w-7 h-7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
     <path d="M16 3H3v18h18V8l-5-5z" /><path d="M16 3v5h5" /><path d="M8 13h8" /><path d="M8 17h5" />
@@ -43,6 +43,14 @@ const TrophyIcon = () => (
 const BookOpenIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" className="w-7 h-7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
     <path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/>
+  </svg>
+);
+const GroupIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" className="w-7 h-7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+    <circle cx="9" cy="7" r="4" />
+    <path d="M23 21v-2a4 4 0 00-3-3.87" />
+    <path d="M16 3.13a4 4 0 010 7.75" />
   </svg>
 );
 
@@ -85,7 +93,8 @@ export default function DashboardPage() {
     { href: "/leaderboard", label: "Leaderboard", icon: <LeaderboardIcon />, desc: "Top referrers & rankings", color: "from-yellow-500 to-amber-500", bgLight: "bg-yellow-50 dark:bg-yellow-900/20", textColor: "text-yellow-600 dark:text-yellow-400" },
     { href: "/dashboard/achievements", label: "Achievements", icon: <TrophyIcon />, desc: "Your unlocked badges & rewards", color: "from-rose-500 to-pink-500", bgLight: "bg-rose-50 dark:bg-rose-900/20", textColor: "text-rose-600 dark:text-rose-400" },
     { href: "/dashboard/notifications", label: "Notifications", icon: <HiBell className="text-2xl"/>, desc: "View all alerts" },
-    { href: "/dashboard/my-courses", label: "My Courses", icon: <BookOpenIcon />, desc: "Enrolled courses & progress", color: "from-teal-500 to-cyan-500", bgLight: "bg-teal-50 dark:bg-teal-900/20", textColor: "text-teal-600 dark:text-teal-400" },  // ✅ New
+    { href: "/dashboard/my-courses", label: "My Courses", icon: <BookOpenIcon />, desc: "Enrolled courses & progress", color: "from-teal-500 to-cyan-500", bgLight: "bg-teal-50 dark:bg-teal-900/20", textColor: "text-teal-600 dark:text-teal-400" },
+    { href: "/dashboard/my-groups", label: "My Groups", icon: <GroupIcon />, desc: "Your community groups", color: "from-sky-500 to-cyan-500", bgLight: "bg-sky-50 dark:bg-sky-900/20", textColor: "text-sky-600 dark:text-sky-400" },   // ✅ नया
   ];
 
   return (
