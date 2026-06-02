@@ -1,53 +1,48 @@
 "use client";
 export const dynamic = 'force-dynamic';
 
-import { HiShoppingBag, HiUser, HiCurrencyRupee, HiShare, HiTrophy, BookOpenIcon, HiBell } from "react-icons/hi";
+import { HiShoppingBag, HiUser, HiCurrencyRupee, HiShare, HiTrophy, HiBell } from "react-icons/hi";
 import { useAuth } from "@/context/AuthContext";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
-// Premium SVG Icons
+// Premium SVG Icons (same as before, plus BookOpen for courses)
 const OrderIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" className="w-7 h-7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
     <path d="M16 3H3v18h18V8l-5-5z" /><path d="M16 3v5h5" /><path d="M8 13h8" /><path d="M8 17h5" />
   </svg>
 );
-
 const ProfileIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" className="w-7 h-7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="8" r="4" /><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8" />
   </svg>
 );
-
 const ReferralIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" className="w-7 h-7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="10" /><path d="M8 12h8" /><path d="M12 8l4 4-4 4" />
   </svg>
 );
-
 const WalletIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" className="w-7 h-7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
     <rect x="2" y="4" width="20" height="16" rx="2" /><circle cx="16" cy="12" r="2" /><path d="M2 10h4" />
   </svg>
 );
-
 const LeaderboardIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" className="w-7 h-7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
     <path d="M12 2l2.4 7.2h7.6l-6 4.8 2.4 7.2-6-4.8-6 4.8 2.4-7.2-6-4.8h7.6z" />
   </svg>
 );
-
-// 🏆 New Trophy Icon for Achievements
 const TrophyIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" className="w-7 h-7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M6 9H4a2 2 0 01-2-2V5a2 2 0 012-2h2" />
-    <path d="M18 9h2a2 2 0 002-2V5a2 2 0 00-2-2h-2" />
-    <path d="M6 21h12" />
-    <path d="M12 17V5" />
-    <path d="M8 21h8" />
-    <path d="M12 13a4 4 0 100-8 4 4 0 000 8z" />
+    <path d="M6 9H4a2 2 0 01-2-2V5a2 2 0 012-2h2" /><path d="M18 9h2a2 2 0 002-2V5a2 2 0 00-2-2h-2" />
+    <path d="M6 21h12" /><path d="M12 17V5" /><path d="M8 21h8" /><path d="M12 13a4 4 0 100-8 4 4 0 000 8z" />
+  </svg>
+);
+const BookOpenIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" className="w-7 h-7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/>
   </svg>
 );
 
@@ -89,8 +84,8 @@ export default function DashboardPage() {
     { href: "/dashboard/wallet", label: "My Wallet", icon: <WalletIcon />, desc: "Balance, coins & transactions", color: "from-green-500 to-emerald-500", bgLight: "bg-green-50 dark:bg-green-900/20", textColor: "text-green-600 dark:text-green-400" },
     { href: "/leaderboard", label: "Leaderboard", icon: <LeaderboardIcon />, desc: "Top referrers & rankings", color: "from-yellow-500 to-amber-500", bgLight: "bg-yellow-50 dark:bg-yellow-900/20", textColor: "text-yellow-600 dark:text-yellow-400" },
     { href: "/dashboard/achievements", label: "Achievements", icon: <TrophyIcon />, desc: "Your unlocked badges & rewards", color: "from-rose-500 to-pink-500", bgLight: "bg-rose-50 dark:bg-rose-900/20", textColor: "text-rose-600 dark:text-rose-400" },
-    { href: "/dashboard/my-courses", label: "My Courses", icon: <BookOpenIcon />, desc: "Your enrolled courses & progress", color: "from-teal-500 to-cyan-500", bgLight: "bg-teal-50 dark:bg-teal-900/20", textColor: "text-teal-600 dark:text-teal-400" },
     { href: "/dashboard/notifications", label: "Notifications", icon: <HiBell className="text-2xl"/>, desc: "View all alerts" },
+    { href: "/dashboard/my-courses", label: "My Courses", icon: <BookOpenIcon />, desc: "Enrolled courses & progress", color: "from-teal-500 to-cyan-500", bgLight: "bg-teal-50 dark:bg-teal-900/20", textColor: "text-teal-600 dark:text-teal-400" },  // ✅ New
   ];
 
   return (
