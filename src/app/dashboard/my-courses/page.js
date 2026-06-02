@@ -18,6 +18,18 @@ const PlayIcon = () => (
   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
 );
 
+const TestIcon = () => (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+    <path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
+  </svg>
+);
+
+const CertificateIcon = () => (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+    <circle cx="12" cy="8" r="6" /><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11" />
+  </svg>
+);
+
 const ArrowRightIcon = () => (
   <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
     <path d="M5 12h14m-7-7l7 7-7 7"/>
@@ -37,6 +49,7 @@ export default function MyCoursesPage() {
   const { user } = useAuth();
   const [enrollments, setEnrollments] = useState([]);
   const [coursesMap, setCoursesMap] = useState({});
+  const [certificatesMap, setCertificatesMap] = useState({}); // courseId -> certId
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -45,9 +58,9 @@ export default function MyCoursesPage() {
       return;
     }
 
-    const fetchEnrollments = async () => {
+    const fetchData = async () => {
       try {
-        // Fetch user's enrollments (no orderBy, client sort)
+        // Fetch enrollments
         const q = query(
           collection(db, "enrollments"),
           where("userId", "==", user.uid)
@@ -70,13 +83,27 @@ export default function MyCoursesPage() {
           }
         }
         setCoursesMap(courseMap);
+
+        // Fetch certificates for this user and these courses
+        const certQuery = query(
+          collection(db, "certificates"),
+          where("userId", "==", user.uid),
+          where("courseId", "in", courseIds)
+        );
+        const certSnap = await getDocs(certQuery);
+        const certMap = {};
+        certSnap.docs.forEach(d => {
+          const data = d.data();
+          certMap[data.courseId] = d.id;
+        });
+        setCertificatesMap(certMap);
       } catch (err) {
         console.error("Failed to load enrollments:", err);
       }
       setLoading(false);
     };
 
-    fetchEnrollments();
+    fetchData();
   }, [user]);
 
   if (!user) {
@@ -114,6 +141,8 @@ export default function MyCoursesPage() {
           const course = coursesMap[enrollment.courseId];
           if (!course) return null; // Course might have been deleted
 
+          const certId = certificatesMap[course.id]; // undefined if no certificate
+
           return (
             <div key={enrollment.id} className="card flex flex-col sm:flex-row gap-4 items-start sm:items-center">
               {/* Thumbnail */}
@@ -137,17 +166,37 @@ export default function MyCoursesPage() {
                 </div>
               </div>
 
-              {/* Action Button */}
-              <Link
-                href={
-                  enrollment.lastAccessedLessonId
-                    ? `/courses/${course.id}/lessons/${enrollment.lastAccessedLessonId}`
-                    : `/courses/${course.id}`
-                }
-                className="btn-gradient text-sm flex items-center gap-2 whitespace-nowrap self-end sm:self-center"
-              >
-                {enrollment.progress > 0 ? "Continue" : "Start"} <PlayIcon />
-              </Link>
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2 self-end sm:self-center">
+                {/* Continue / Start Lesson */}
+                <Link
+                  href={
+                    enrollment.lastAccessedLessonId
+                      ? `/courses/${course.id}/lessons/${enrollment.lastAccessedLessonId}`
+                      : `/courses/${course.id}`
+                  }
+                  className="btn-gradient text-sm flex items-center gap-2 whitespace-nowrap"
+                >
+                  {enrollment.progress > 0 ? "Continue" : "Start"} <PlayIcon />
+                </Link>
+
+                {/* Certificate or Test Button */}
+                {certId ? (
+                  <Link
+                    href={`/courses/${course.id}/certificate?certId=${certId}`}
+                    className="bg-green-500 hover:bg-green-600 text-white text-sm flex items-center gap-1 px-3 py-1.5 rounded-lg whitespace-nowrap"
+                  >
+                    <CertificateIcon /> View Certificate
+                  </Link>
+                ) : enrollment.progress === 100 ? (
+                  <Link
+                    href={`/courses/${course.id}/test`}
+                    className="bg-yellow-500 hover:bg-yellow-600 text-white text-sm flex items-center gap-1 px-3 py-1.5 rounded-lg whitespace-nowrap"
+                  >
+                    <TestIcon /> Take Test
+                  </Link>
+                ) : null}
+              </div>
             </div>
           );
         })}
