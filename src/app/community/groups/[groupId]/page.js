@@ -35,7 +35,7 @@ const YouTubeEmbed = ({ videoId }) => (
 export default function GroupDetailPage() {
   const params = useParams();
   const groupId = params.groupId;
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();   // ✅ isAdmin लिया गया
   const router = useRouter();
 
   const [group, setGroup] = useState(null);
@@ -51,7 +51,11 @@ export default function GroupDetailPage() {
     const fetchData = async () => {
       try {
         const groupSnap = await getDoc(doc(db, "groups", groupId));
-        if (!groupSnap.exists()) { toast.error("Group not found"); router.push("/community/groups"); return; }
+        if (!groupSnap.exists()) {
+          toast.error("Group not found");
+          router.push("/community/groups");
+          return;
+        }
         setGroup({ id: groupSnap.id, ...groupSnap.data() });
 
         // Members count
@@ -68,15 +72,21 @@ export default function GroupDetailPage() {
         const groupPosts = allPosts.filter(p => p.groupId === groupId && !p.isDeleted);
         groupPosts.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
         setPosts(groupPosts);
-      } catch (err) { console.error(err); toast.error("Failed to load group"); }
+      } catch (err) {
+        console.error(err);
+        toast.error("Failed to load group");
+      }
       setLoading(false);
     };
     fetchData();
   }, [groupId, user]);
 
   const handleJoin = async () => {
-    if (!user) { toast.error("Please login"); return; }
-    // ✅ अब कोई student verification आवश्यक नहीं
+    if (!user) {
+      toast.error("Please login");
+      return;
+    }
+    // ✅ सभी login users जॉइन कर सकते हैं
     try {
       await addDoc(collection(db, "groups", groupId, "members"), {
         userId: user.uid,
@@ -86,7 +96,9 @@ export default function GroupDetailPage() {
       setIsMember(true);
       setMemberCount(prev => prev + 1);
       toast.success("Joined group!");
-    } catch (err) { toast.error("Failed to join"); }
+    } catch (err) {
+      toast.error("Failed to join");
+    }
   };
 
   const copyInviteLink = () => {
@@ -95,7 +107,26 @@ export default function GroupDetailPage() {
     toast.success("Invite link copied!");
   };
 
-  if (loading) return <div className="flex justify-center items-center min-h-[50vh]"><div className="animate-spin w-10 h-10 border-4 border-primary-500 border-t-transparent rounded-full" /></div>;
+  // ✅ Delete handler with proper isAdmin check
+  const handleDeletePost = async (postId) => {
+    if (!confirm("Are you sure you want to delete this post?")) return;
+    try {
+      await updateDoc(doc(db, "posts", postId), { isDeleted: true });
+      setPosts(prev => prev.filter(p => p.id !== postId));
+      toast.success("Post deleted");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to delete post");
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-[50vh]">
+        <div className="animate-spin w-10 h-10 border-4 border-primary-500 border-t-transparent rounded-full" />
+      </div>
+    );
+  }
   if (!group) return null;
 
   return (
@@ -132,46 +163,61 @@ export default function GroupDetailPage() {
         </div>
         {showInvite && (
           <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-xl flex items-center justify-between">
-            <code className="text-sm">{`https://quickshoppro.vercel.app/community/groups/join?invite=${group.inviteCode}`}</code>
-            <button onClick={copyInviteLink} className="btn-gradient text-xs ml-2">Copy</button>
+            <code className="text-sm break-all">{`https://quickshoppro.vercel.app/community/groups/join?invite=${group.inviteCode}`}</code>
+            <button onClick={copyInviteLink} className="btn-gradient text-xs ml-2 whitespace-nowrap">Copy</button>
           </div>
         )}
       </div>
 
       {/* Post Feed */}
-      {posts.length === 0 && <p className="text-center text-gray-500 py-12">No posts yet. Be the first to share!</p>}
+      {posts.length === 0 && (
+        <p className="text-center text-gray-500 py-12">No posts yet. Be the first to share!</p>
+      )}
       <div className="space-y-4">
         {posts.map(post => (
           <div key={post.id} className="card">
             <div className="flex justify-between items-start mb-3">
               <div>
                 <span className="font-medium">{post.authorName}</span>
-                <span className="text-xs text-gray-400 ml-2">{new Date(post.createdAt?.toDate()).toLocaleString()}</span>
+                <span className="text-xs text-gray-400 ml-2">
+                  {post.createdAt?.toDate ? new Date(post.createdAt.toDate()).toLocaleString() : ''}
+                </span>
               </div>
               <div className="flex gap-2">
                 <button onClick={() => {
+                  const url = `${window.location.origin}/community/groups/${groupId}?post=${post.id}`;
                   if (navigator.share) {
-                    navigator.share({ title: 'Check this post', url: `${window.location.origin}/community/groups/${groupId}?post=${post.id}` });
+                    navigator.share({ title: 'Check this post', url });
                   } else {
-                    navigator.clipboard.writeText(`${window.location.origin}/community/groups/${groupId}?post=${post.id}`);
+                    navigator.clipboard.writeText(url);
                     toast.success("Post link copied!");
                   }
-                }} className="text-gray-400 hover:text-primary-600"><ShareIcon /></button>
-                {user && (user.uid === post.authorId || user.isAdmin) && (
-                  <button onClick={async () => {
-                    if (confirm("Delete post?")) {
-                      await updateDoc(doc(db, "posts", post.id), { isDeleted: true });
-                      setPosts(posts.filter(p => p.id !== post.id));
-                      toast.success("Post deleted");
-                    }
-                  }} className="text-gray-400 hover:text-red-500"><HiTrash /></button>
+                }} className="text-gray-400 hover:text-primary-600" title="Share">
+                  <ShareIcon />
+                </button>
+                {/* ✅ Delete button – only post author or admin can see */}
+                {user && (user.uid === post.authorId || isAdmin) && (
+                  <button
+                    onClick={() => handleDeletePost(post.id)}
+                    className="text-gray-400 hover:text-red-500"
+                    title="Delete post"
+                  >
+                    <HiTrash className="w-4 h-4" />
+                  </button>
                 )}
               </div>
             </div>
             {/* Rich Text (HTML) */}
             <div className="prose dark:prose-invert max-w-none text-sm" dangerouslySetInnerHTML={{ __html: post.text }} />
-            {/* Image */}
-            {post.imageUrl && <img src={post.imageUrl} alt="Post attachment" className="mt-3 rounded-xl max-h-96 object-contain w-full" />}
+            {/* Image – अगर कोई इमेज नहीं तो कुछ न दिखाएं */}
+            {post.imageUrl && (
+              <img
+                src={post.imageUrl}
+                alt="Post attachment"
+                className="mt-3 rounded-xl max-h-96 object-contain w-full"
+                onError={(e) => { e.target.style.display = 'none'; }}
+              />
+            )}
             {/* YouTube Embed */}
             {post.videoId && <YouTubeEmbed videoId={post.videoId} />}
           </div>
