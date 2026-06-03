@@ -3,20 +3,11 @@ export const dynamic = 'force-dynamic';
 
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
-import { collection, getDocs, updateDoc, doc, query, where } from "firebase/firestore";
+import { collection, getDocs, updateDoc, doc, getDoc } from "firebase/firestore";
 import { toast } from "react-hot-toast";
-import { HiZoomIn, HiCheck, HiX, HiSearch } from "react-icons/hi";
+import { HiSearch, HiZoomIn, HiDownload } from "react-icons/hi";
 
-/* ────── Premium SVG Icons ────── */
-const ZoomIcon = () => (
-  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-    <circle cx="11" cy="11" r="8" />
-    <line x1="21" y1="21" x2="16.65" y2="16.65" />
-    <line x1="11" y1="8" x2="11" y2="14" />
-    <line x1="8" y1="11" x2="14" y2="11" />
-  </svg>
-);
-
+/* ────── SVG Icons ────── */
 const ApproveIcon = () => (
   <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
     <polyline points="20 6 9 17 4 12" />
@@ -30,34 +21,19 @@ const RejectIcon = () => (
   </svg>
 );
 
-const DownloadIcon = () => (
-  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
-    <polyline points="7 10 12 15 17 10" />
-    <line x1="12" y1="15" x2="12" y2="3" />
-  </svg>
-);
-
-const CheckCircleIcon = () => (
-  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-  </svg>
-);
-
 export default function AdminVerificationsPage() {
   const [verifications, setVerifications] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedImage, setSelectedImage] = useState(null);
-  const [rejectNote, setRejectNote] = useState("");
-  const [rejectingId, setRejectingId] = useState(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("pending");
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [rejectingId, setRejectingId] = useState(null);
+  const [rejectNote, setRejectNote] = useState("");
 
   const fetchVerifications = async () => {
     try {
       const snap = await getDocs(collection(db, "studentVerifications"));
       let list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      // Client-side sort – newest first
       list.sort((a, b) => (b.submittedAt?.toMillis() || 0) - (a.submittedAt?.toMillis() || 0));
       setVerifications(list);
     } catch (err) {
@@ -68,21 +44,29 @@ export default function AdminVerificationsPage() {
 
   useEffect(() => { fetchVerifications(); }, []);
 
-  // Approve handler
   const handleApprove = async (verification) => {
     try {
-      // Update user document
-      await updateDoc(doc(db, "users", verification.userId), {
+      // ✅ Check if users document exists
+      const userDocRef = doc(db, "users", verification.userId);
+      const userSnap = await getDoc(userDocRef);
+
+      if (!userSnap.exists()) {
+        toast.error("User document not found. Cannot approve. (User may not have completed signup)");
+        return;
+      }
+
+      await updateDoc(userDocRef, {
         studentVerified: true,
         verificationId: verification.id,
         city: verification.city,
         state: verification.state,
       });
-      // Update verification record
+
       await updateDoc(doc(db, "studentVerifications", verification.id), {
         status: "approved",
         adminNote: "Approved",
       });
+
       toast.success("Student approved successfully!");
       fetchVerifications();
     } catch (err) {
@@ -91,7 +75,6 @@ export default function AdminVerificationsPage() {
     }
   };
 
-  // Reject handler
   const handleReject = async (verification) => {
     if (!rejectNote.trim()) {
       toast.error("Please provide a reason for rejection");
@@ -107,12 +90,10 @@ export default function AdminVerificationsPage() {
       setRejectNote("");
       fetchVerifications();
     } catch (err) {
-      console.error(err);
       toast.error("Rejection failed");
     }
   };
 
-  // Filtering
   const filtered = verifications.filter(v => {
     const matchStatus = statusFilter === "all" || v.status === statusFilter;
     const matchSearch = v.studentName?.toLowerCase().includes(search.toLowerCase()) ||
@@ -132,7 +113,6 @@ export default function AdminVerificationsPage() {
     <div className="p-4 md:p-0">
       <h2 className="text-2xl font-bold mb-6">Student Verifications</h2>
 
-      {/* Search & Filter */}
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <div className="relative flex-grow">
           <span className="absolute left-3 top-3 text-gray-400"><HiSearch /></span>
@@ -156,9 +136,7 @@ export default function AdminVerificationsPage() {
         </select>
       </div>
 
-      {filtered.length === 0 && (
-        <p className="text-center text-gray-500 py-12">No verification requests found.</p>
-      )}
+      {filtered.length === 0 && <p className="text-center text-gray-500 py-12">No verification requests found.</p>}
 
       <div className="space-y-4">
         {filtered.map(verification => (
@@ -180,15 +158,13 @@ export default function AdminVerificationsPage() {
               )}
             </div>
             <div className="flex gap-2 items-start self-end sm:self-center">
-              {/* Zoom ID Card */}
               <button
                 onClick={() => setSelectedImage(verification.idCardImage)}
                 className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg"
                 title="Zoom ID Card"
               >
-                <ZoomIcon />
+                <HiZoomIn />
               </button>
-              {/* Download ID Card */}
               <a
                 href={verification.idCardImage}
                 target="_blank"
@@ -196,31 +172,28 @@ export default function AdminVerificationsPage() {
                 className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg"
                 title="Download ID Card"
               >
-                <DownloadIcon />
+                <HiDownload />
               </a>
-              {/* Approve button (only for pending) */}
               {verification.status === 'pending' && (
-                <button
-                  onClick={() => handleApprove(verification)}
-                  className="p-2 bg-green-100 dark:bg-green-900/30 text-green-600 rounded-lg hover:bg-green-200"
-                  title="Approve"
-                >
-                  <ApproveIcon />
-                </button>
-              )}
-              {/* Reject button (only for pending) */}
-              {verification.status === 'pending' && (
-                <button
-                  onClick={() => setRejectingId(verification.id)}
-                  className="p-2 bg-red-100 dark:bg-red-900/30 text-red-600 rounded-lg hover:bg-red-200"
-                  title="Reject"
-                >
-                  <RejectIcon />
-                </button>
+                <>
+                  <button
+                    onClick={() => handleApprove(verification)}
+                    className="p-2 bg-green-100 dark:bg-green-900/30 text-green-600 rounded-lg hover:bg-green-200"
+                    title="Approve"
+                  >
+                    <ApproveIcon />
+                  </button>
+                  <button
+                    onClick={() => setRejectingId(verification.id)}
+                    className="p-2 bg-red-100 dark:bg-red-900/30 text-red-600 rounded-lg hover:bg-red-200"
+                    title="Reject"
+                  >
+                    <RejectIcon />
+                  </button>
+                </>
               )}
             </div>
 
-            {/* Rejection Reason Modal */}
             {rejectingId === verification.id && (
               <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setRejectingId(null)}>
                 <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-md space-y-4" onClick={e => e.stopPropagation()}>
@@ -243,7 +216,6 @@ export default function AdminVerificationsPage() {
         ))}
       </div>
 
-      {/* Zoom Modal for ID Card */}
       {selectedImage && (
         <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" onClick={() => setSelectedImage(null)}>
           <div className="relative max-w-4xl max-h-full" onClick={e => e.stopPropagation()}>
