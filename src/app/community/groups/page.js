@@ -6,7 +6,6 @@ import { db } from "@/lib/firebase";
 import { collection, getDocs } from "firebase/firestore";
 import { useAuth } from "@/context/AuthContext";
 import Link from "next/link";
-import { HiSearch, HiPlus, HiLockClosed, HiGlobe } from "react-icons/hi";
 
 /* ────── Premium SVG Icons ────── */
 const GroupIcon = () => (
@@ -22,6 +21,35 @@ const MapPinIcon = () => (
   <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
     <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
     <circle cx="12" cy="10" r="3" />
+  </svg>
+);
+
+const SearchIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+    <circle cx="11" cy="11" r="8" />
+    <path d="M21 21l-4.35-4.35" />
+  </svg>
+);
+
+const PlusIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+    <line x1="12" y1="5" x2="12" y2="19" />
+    <line x1="5" y1="12" x2="19" y2="12" />
+  </svg>
+);
+
+const LockIcon = () => (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+    <path d="M7 11V7a5 5 0 0110 0v4" />
+  </svg>
+);
+
+const GlobeIcon = () => (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="10" />
+    <ellipse cx="12" cy="12" rx="4" ry="10" />
+    <path d="M2 12h20" />
   </svg>
 );
 
@@ -67,10 +95,9 @@ export default function GroupsPage() {
     <div className="max-w-4xl mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Community Groups 👥</h1>
-        {/* ✅ All logged-in users can create groups */}
         {user && (
           <Link href="/community/groups/create" className="btn-gradient flex items-center gap-2">
-            <HiPlus /> Create Group
+            <PlusIcon /> Create Group
           </Link>
         )}
       </div>
@@ -78,7 +105,7 @@ export default function GroupsPage() {
       {/* Search & Filters */}
       <div className="flex flex-col sm:flex-row gap-4 mb-8">
         <div className="relative flex-grow">
-          <span className="absolute left-3 top-3 text-gray-400"><HiSearch /></span>
+          <span className="absolute left-3 top-3 text-gray-400"><SearchIcon /></span>
           <input
             type="text"
             placeholder="Search groups..."
@@ -108,16 +135,23 @@ export default function GroupsPage() {
         {filtered.map(group => (
           <Link key={group.id} href={`/community/groups/${group.id}`} className="card group hover:shadow-lg transition">
             <div className="flex items-start gap-3">
-              <div className="w-12 h-12 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 flex-shrink-0">
-                <GroupIcon />
+              <div className="w-12 h-12 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 flex-shrink-0 overflow-hidden">
+                {group.iconUrl ? (
+                  <img src={group.iconUrl} alt={group.name} className="w-full h-full object-cover" />
+                ) : (
+                  <GroupIcon />
+                )}
               </div>
               <div className="flex-grow">
                 <h3 className="font-bold text-lg">{group.name}</h3>
-                <p className="text-sm text-gray-500 line-clamp-2">{group.description}</p>
+                <div
+                  className="text-sm text-gray-500 line-clamp-2 prose dark:prose-invert max-w-none"
+                  dangerouslySetInnerHTML={{ __html: group.description || "" }}
+                />
                 <div className="flex items-center gap-3 mt-2 text-xs text-gray-400">
                   {group.city && <span className="flex items-center gap-1"><MapPinIcon /> {group.city}, {group.state}</span>}
                   <span className="flex items-center gap-1">
-                    {group.privacy === 'private' ? <HiLockClosed /> : <HiGlobe />}
+                    {group.privacy === 'private' ? <LockIcon /> : <GlobeIcon />}
                     {group.privacy === 'private' ? 'Private' : 'Public'}
                   </span>
                 </div>
