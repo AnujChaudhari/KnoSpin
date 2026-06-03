@@ -6,6 +6,7 @@ import { db } from "@/lib/firebase";
 import { collection, getDocs, deleteDoc, doc } from "firebase/firestore";
 import { toast } from "react-hot-toast";
 import { HiSearch } from "react-icons/hi";
+import Link from "next/link";
 
 /* ────── SVG Icons ────── */
 const DeleteIcon = () => (
@@ -20,6 +21,13 @@ const DeleteIcon = () => (
 const GroupIcon = () => (
   <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
     <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87" /><path d="M16 3.13a4 4 0 010 7.75" />
+  </svg>
+);
+
+const MembersIcon = () => (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+    <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="8.5" cy="7" r="4" />
+    <path d="M20 8v6" /><path d="M23 11h-6" />
   </svg>
 );
 
@@ -65,9 +73,21 @@ export default function AdminCommunityGroupsPage() {
                 <p className="text-xs text-gray-500">Created by: {group.createdBy?.slice(0,8)} | {group.privacy}</p>
               </div>
             </div>
-            <button onClick={() => handleDelete(group.id)} className="p-2 bg-red-100 dark:bg-red-900/30 text-red-500 rounded-lg">
-              <DeleteIcon />
-            </button>
+            <div className="flex items-center gap-2">
+              {/* Members button – new */}
+              <Link
+                href={`/admin/community/groups/${group.id}/members`}
+                className="p-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 rounded-lg hover:bg-blue-200 flex items-center gap-1"
+                title="Manage Members"
+              >
+                <MembersIcon />
+                <span className="text-xs">Members</span>
+              </Link>
+              {/* Delete button */}
+              <button onClick={() => handleDelete(group.id)} className="p-2 bg-red-100 dark:bg-red-900/30 text-red-500 rounded-lg">
+                <DeleteIcon />
+              </button>
+            </div>
           </div>
         ))}
       </div>
