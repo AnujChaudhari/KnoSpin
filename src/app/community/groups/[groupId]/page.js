@@ -148,7 +148,7 @@ export default function GroupDetailPage() {
         )}
       </div>
 
-      {/* Post Feed */}
+      {/* Post Feed 
       {posts.length === 0 && <p className="text-center text-gray-500 py-12">No posts yet. Be the first to share!</p>}
       <div className="space-y-4">
         {posts.map(post => (
@@ -157,7 +157,7 @@ export default function GroupDetailPage() {
               <div>
                 <span className="font-medium">{post.authorName}</span>
                 <span className="text-xs text-gray-400 ml-2">{new Date(post.createdAt?.toDate()).toLocaleString()}</span>
-              </div>
+              </div> */}
               <div className="flex gap-2">
                 <button onClick={() => {
                   if (navigator.share) {
