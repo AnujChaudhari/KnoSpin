@@ -43,6 +43,26 @@ const YouTubeEmbed = ({ videoId }) => (
   </div>
 );
 
+// @mention को हाइलाइट करने के लिए हेल्पर
+const renderWithMentions = (text) => {
+  if (!text) return "";
+  const mentionRegex = /@([a-zA-Z0-9_.]+)/g;
+  const parts = [];
+  let lastIndex = 0;
+  let match;
+  while ((match = mentionRegex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(text.substring(lastIndex, match.index));
+    }
+    parts.push(`<span class="text-primary-600 font-medium">@${match[1]}</span>`);
+    lastIndex = match.index + match[0].length;
+  }
+  if (lastIndex < text.length) {
+    parts.push(text.substring(lastIndex));
+  }
+  return parts.join('');
+};
+
 export default function GroupDetailPage() {
   const params = useParams();
   const groupId = params.groupId;
@@ -111,12 +131,18 @@ export default function GroupDetailPage() {
       {/* Group Header */}
       <div className="card mb-6">
         <div className="flex items-start gap-4">
-          <div className="w-14 h-14 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 flex-shrink-0">
-            <GroupIcon />
+          {/* ✅ ग्रुप आइकन – इमेज या SVG */}
+          <div className="w-14 h-14 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 flex-shrink-0 overflow-hidden">
+            {group.iconUrl ? (
+              <img src={group.iconUrl} alt={group.name} className="w-full h-full object-cover" />
+            ) : (
+              <GroupIcon />
+            )}
           </div>
           <div className="flex-grow">
             <h1 className="text-2xl font-bold">{group.name}</h1>
-            <p className="text-gray-500">{group.description}</p>
+            {/* ✅ रिच टेक्स्ट डिस्क्रिप्शन */}
+            <div className="text-gray-500 prose dark:prose-invert max-w-none text-sm" dangerouslySetInnerHTML={{ __html: group.description }} />
             <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
               <span className="flex items-center gap-1"><MembersIcon /> {memberCount} members</span>
               <span>{group.privacy === 'private' ? 'Private' : 'Public'}</span>
@@ -161,7 +187,7 @@ export default function GroupDetailPage() {
               <div className="flex gap-2">
                 <button onClick={() => {
                   if (navigator.share) {
-                    navigator.share({ title: 'Check this post', url: `${window.location.origin}/community/groups/${groupId}?post=${post.id}` });
+                    navigator.share({ title: 'Check this post', url: `${window.location.origin}/community/groups/${groupId}?post=${post.id}` }).catch(() => {});
                   } else {
                     navigator.clipboard.writeText(`${window.location.origin}/community/groups/${groupId}?post=${post.id}`);
                     toast.success("Post link copied!");
@@ -178,7 +204,8 @@ export default function GroupDetailPage() {
                 )}
               </div>
             </div>
-            <div className="prose dark:prose-invert max-w-none text-sm" dangerouslySetInnerHTML={{ __html: post.text }} />
+            {/* ✅ @mention हाइलाइटेड टेक्स्ट */}
+            <div className="prose dark:prose-invert max-w-none text-sm" dangerouslySetInnerHTML={{ __html: renderWithMentions(post.text) }} />
             {post.imageUrl && <img src={post.imageUrl} alt="Post attachment" className="mt-3 rounded-xl max-h-96 object-contain w-full" />}
             {post.videoId && <YouTubeEmbed videoId={post.videoId} />}
           </div>
