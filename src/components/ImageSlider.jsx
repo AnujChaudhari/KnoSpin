@@ -1,19 +1,35 @@
 "use client";
 import { useState, useRef } from "react";
-import { HiChevronLeft, HiChevronRight, HiZoomIn, HiZoomOut, HiX } from "react-icons/hi";
 import { motion, AnimatePresence } from "framer-motion";
 
-// इनलाइन SVG प्लेसहोल्डर (जब कोई इमेज न हो)
-const EmptyImagePlaceholder = () => (
-  <svg className="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" strokeWidth="1" viewBox="0 0 24 24">
-    <rect width="24" height="24" rx="3" fill="none" />
-    <circle cx="8.5" cy="8.5" r="1.5" />
-    <polyline points="21 15 16 10 5 21" />
+const FALLBACK_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Crect width='300' height='300' fill='%23e2e8f0'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%2394a3b8' font-size='20'%3ENo Image%3C/text%3E%3C/svg%3E";
+
+/* ────────── Inline SVG Icons ────────── */
+const ChevronLeftIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+    <polyline points="15 18 9 12 15 6" />
   </svg>
 );
-
-// इमेज लोड न होने पर दिखाने के लिए एक सादा डेटा URL (SVG)
-const FALLBACK_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Crect width='300' height='300' fill='%23e2e8f0'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%2394a3b8' font-size='20'%3ENo Image%3C/text%3E%3C/svg%3E";
+const ChevronRightIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+    <polyline points="9 18 15 12 9 6" />
+  </svg>
+);
+const ZoomInIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+    <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /><line x1="11" y1="8" x2="11" y2="14" /><line x1="8" y1="11" x2="14" y2="11" />
+  </svg>
+);
+const ZoomOutIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+    <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /><line x1="8" y1="11" x2="14" y2="11" />
+  </svg>
+);
+const CloseIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+  </svg>
+);
 
 export default function ImageSlider({ images }) {
   const [current, setCurrent] = useState(0);
@@ -22,11 +38,10 @@ export default function ImageSlider({ images }) {
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
 
-  // अगर images एरे खाली या undefined है
   if (!images || images.length === 0) {
     return (
       <div className="w-full h-80 bg-gray-100 dark:bg-gray-700 rounded-2xl flex items-center justify-center">
-        <EmptyImagePlaceholder />
+        <span className="text-gray-400">No Image</span>
       </div>
     );
   }
@@ -34,7 +49,6 @@ export default function ImageSlider({ images }) {
   const prev = () => setCurrent((prev) => (prev === 0 ? images.length - 1 : prev - 1));
   const next = () => setCurrent((prev) => (prev === images.length - 1 ? 0 : prev + 1));
 
-  // टच स्वाइप
   const handleTouchStart = (e) => {
     touchStartX.current = e.touches[0].clientX;
   };
@@ -57,7 +71,6 @@ export default function ImageSlider({ images }) {
 
   return (
     <div className="w-full space-y-4">
-      {/* ========== Main Image Container ========== */}
       <div className="relative w-full bg-gray-100 dark:bg-gray-800 rounded-2xl overflow-hidden shadow-lg group">
         <AnimatePresence mode="wait">
           <motion.img
@@ -76,7 +89,6 @@ export default function ImageSlider({ images }) {
           />
         </AnimatePresence>
 
-        {/* Left / Right Arrows – centered vertically */}
         {images.length > 1 && (
           <>
             <button
@@ -84,25 +96,23 @@ export default function ImageSlider({ images }) {
               className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/90 dark:bg-gray-700/90 p-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white dark:hover:bg-gray-600 focus:opacity-100"
               aria-label="Previous image"
             >
-              <HiChevronLeft className="w-5 h-5 text-gray-800 dark:text-white" />
+              <ChevronLeftIcon />
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); next(); }}
               className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/90 dark:bg-gray-700/90 p-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white dark:hover:bg-gray-600 focus:opacity-100"
               aria-label="Next image"
             >
-              <HiChevronRight className="w-5 h-5 text-gray-800 dark:text-white" />
+              <ChevronRightIcon />
             </button>
           </>
         )}
 
-        {/* Image counter */}
         <div className="absolute bottom-3 right-3 bg-black/60 text-white text-xs px-2 py-1 rounded-full">
           {current + 1} / {images.length}
         </div>
       </div>
 
-      {/* ========== Thumbnail Strip ========== */}
       {images.length > 1 && (
         <div className="flex gap-2 overflow-x-auto py-2 px-1">
           {images.map((img, idx) => (
@@ -126,7 +136,6 @@ export default function ImageSlider({ images }) {
         </div>
       )}
 
-      {/* ========== Zoom Modal ========== */}
       {isZoomed && (
         <div
           className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
@@ -141,9 +150,9 @@ export default function ImageSlider({ images }) {
               onError={(e) => { e.target.src = FALLBACK_IMAGE; }}
             />
             <div className="absolute top-4 right-4 flex gap-2">
-              <button onClick={zoomIn} className="bg-white/90 p-2 rounded-full shadow"><HiZoomIn /></button>
-              <button onClick={zoomOut} className="bg-white/90 p-2 rounded-full shadow"><HiZoomOut /></button>
-              <button onClick={closeZoom} className="bg-white/90 p-2 rounded-full shadow"><HiX /></button>
+              <button onClick={zoomIn} className="bg-white/90 p-2 rounded-full shadow"><ZoomInIcon /></button>
+              <button onClick={zoomOut} className="bg-white/90 p-2 rounded-full shadow"><ZoomOutIcon /></button>
+              <button onClick={closeZoom} className="bg-white/90 p-2 rounded-full shadow"><CloseIcon /></button>
             </div>
           </div>
         </div>
