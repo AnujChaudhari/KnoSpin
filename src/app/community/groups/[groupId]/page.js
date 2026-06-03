@@ -2,14 +2,13 @@
 export const dynamic = 'force-dynamic';
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { db } from "@/lib/firebase";
-import { doc, getDoc, collection, getDocs, addDoc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, collection, getDocs, addDoc, serverTimestamp } from "firebase/firestore";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "react-hot-toast";
 import Link from "next/link";
 
-/* ────── Premium SVG Icons (inline, no external library) ────── */
 const GroupIcon = () => (
   <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
     <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87" /><path d="M16 3.13a4 4 0 010 7.75" />
@@ -34,72 +33,39 @@ const CopyIcon = () => (
 const PlusIcon = () => (
   <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
 );
-const TrashIcon = () => (
-  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" /></svg>
-);
-const YouTubeEmbed = ({ videoId }) => (
-  <div className="aspect-video rounded-xl overflow-hidden shadow bg-black mt-3">
-    <iframe width="100%" height="100%" src={`https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1`} title="YouTube video" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen className="w-full h-full" />
-  </div>
-);
 
 export default function GroupDetailPage() {
   const params = useParams();
   const groupId = params.groupId;
   const { user } = useAuth();
-  const router = useRouter();
-
   const [group, setGroup] = useState(null);
-  const [posts, setPosts] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [memberCount, setMemberCount] = useState(0);
   const [isMember, setIsMember] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!groupId) return;
-
     const fetchData = async () => {
-      try {
-        const groupSnap = await getDoc(doc(db, "groups", groupId));
-        if (!groupSnap.exists()) { toast.error("Group not found"); router.push("/community/groups"); return; }
-        setGroup({ id: groupSnap.id, ...groupSnap.data() });
-
-        const membersSnap = await getDocs(collection(db, "groups", groupId, "members"));
-        setMemberCount(membersSnap.size);
-        if (user) {
-          const already = membersSnap.docs.some(d => d.data().userId === user.uid);
-          setIsMember(already);
-        }
-
-        const postsSnap = await getDocs(collection(db, "posts"));
-        const allPosts = postsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        const groupPosts = allPosts.filter(p => p.groupId === groupId && !p.isDeleted);
-        groupPosts.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
-        setPosts(groupPosts);
-      } catch (err) { console.error(err); toast.error("Failed to load group"); }
+      const groupSnap = await getDoc(doc(db, "groups", groupId));
+      if (!groupSnap.exists()) { toast.error("Group not found"); return; }
+      setGroup({ id: groupSnap.id, ...groupSnap.data() });
+      const membersSnap = await getDocs(collection(db, "groups", groupId, "members"));
+      setMemberCount(membersSnap.size);
+      if (user) setIsMember(membersSnap.docs.some(d => d.data().userId === user.uid));
       setLoading(false);
     };
     fetchData();
   }, [groupId, user]);
 
   const handleJoin = async () => {
-    if (!user) { toast.error("Please login"); return; }
-    try {
-      await addDoc(collection(db, "groups", groupId, "members"), {
-        userId: user.uid,
-        role: "member",
-        joinedAt: serverTimestamp(),
-      });
-      setIsMember(true);
-      setMemberCount(prev => prev + 1);
-      toast.success("Joined group!");
-    } catch (err) { toast.error("Failed to join"); }
+    if (!user) return toast.error("Please login");
+    await addDoc(collection(db, "groups", groupId, "members"), { userId: user.uid, role: "member", joinedAt: serverTimestamp() });
+    setIsMember(true); setMemberCount(prev => prev + 1); toast.success("Joined!");
   };
 
   const copyInviteLink = () => {
-    const link = `https://quickshoppro.vercel.app/community/groups/join?invite=${group.inviteCode}`;
-    navigator.clipboard.writeText(link);
+    navigator.clipboard.writeText(`https://quickshoppro.vercel.app/community/groups/join?invite=${group.inviteCode}`);
     toast.success("Invite link copied!");
   };
 
@@ -108,12 +74,9 @@ export default function GroupDetailPage() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
-      {/* Group Header */}
       <div className="card mb-6">
         <div className="flex items-start gap-4">
-          <div className="w-14 h-14 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 flex-shrink-0">
-            <GroupIcon />
-          </div>
+          <div className="w-14 h-14 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 flex-shrink-0"><GroupIcon /></div>
           <div className="flex-grow">
             <h1 className="text-2xl font-bold">{group.name}</h1>
             <p className="text-gray-500">{group.description}</p>
@@ -123,67 +86,21 @@ export default function GroupDetailPage() {
             </div>
           </div>
           <div className="flex gap-2">
-            {!isMember && (
-              <button onClick={handleJoin} className="btn-gradient text-sm">Join Group</button>
-            )}
-            {isMember && (
-              <>
-                <button onClick={() => setShowInvite(!showInvite)} className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg" title="Invite">
-                  <ShareIcon />
-                </button>
-                <Link href={`/community/groups/${groupId}/post/create`} className="btn-gradient text-sm flex items-center gap-1">
-                  <PlusIcon /> Post
-                </Link>
-              </>
-            )}
+            {!isMember && <button onClick={handleJoin} className="btn-gradient text-sm">Join Group</button>}
+            {isMember && <>
+              <button onClick={() => setShowInvite(!showInvite)} className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg" title="Invite"><ShareIcon /></button>
+              <Link href={`/community/groups/${groupId}/post/create`} className="btn-gradient text-sm flex items-center gap-1"><PlusIcon /> Post</Link>
+            </>}
           </div>
         </div>
         {showInvite && (
           <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-xl flex items-center justify-between">
             <code className="text-sm">{`https://quickshoppro.vercel.app/community/groups/join?invite=${group.inviteCode}`}</code>
-            <button onClick={copyInviteLink} className="btn-gradient text-xs ml-2 flex items-center gap-1">
-              <CopyIcon /> Copy
-            </button>
+            <button onClick={copyInviteLink} className="btn-gradient text-xs ml-2 flex items-center gap-1"><CopyIcon /> Copy</button>
           </div>
         )}
       </div>
-
-      {/* Post Feed */}
-      {posts.length === 0 && <p className="text-center text-gray-500 py-12">No posts yet. Be the first to share!</p>}
-      <div className="space-y-4">
-        {posts.map(post => (
-          <div key={post.id} className="card">
-            <div className="flex justify-between items-start mb-3">
-              <div>
-                <span className="font-medium">{post.authorName}</span>
-                <span className="text-xs text-gray-400 ml-2">{new Date(post.createdAt?.toDate()).toLocaleString()}</span>
-              </div>
-              <div className="flex gap-2">
-                <button onClick={() => {
-                  if (navigator.share) {
-                    navigator.share({ title: 'Check this post', url: `${window.location.origin}/community/groups/${groupId}?post=${post.id}` });
-                  } else {
-                    navigator.clipboard.writeText(`${window.location.origin}/community/groups/${groupId}?post=${post.id}`);
-                    toast.success("Post link copied!");
-                  }
-                }} className="text-gray-400 hover:text-primary-600"><ShareIcon /></button>
-                {user && (user.uid === post.authorId || user.isAdmin) && (
-                  <button onClick={async () => {
-                    if (confirm("Delete post?")) {
-                      await updateDoc(doc(db, "posts", post.id), { isDeleted: true });
-                      setPosts(posts.filter(p => p.id !== post.id));
-                      toast.success("Post deleted");
-                    }
-                  }} className="text-gray-400 hover:text-red-500"><TrashIcon /></button>
-                )}
-              </div>
-            </div>
-            <div className="prose dark:prose-invert max-w-none text-sm" dangerouslySetInnerHTML={{ __html: post.text }} />
-            {post.imageUrl && <img src={post.imageUrl} alt="Post attachment" className="mt-3 rounded-xl max-h-96 object-contain w-full" />}
-            {post.videoId && <YouTubeEmbed videoId={post.videoId} />}
-          </div>
-        ))}
-      </div>
+      {/* कोई पोस्ट सेक्शन नहीं */}
     </div>
   );
 }
