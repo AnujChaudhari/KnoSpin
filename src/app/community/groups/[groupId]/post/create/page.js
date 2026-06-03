@@ -25,6 +25,21 @@ const extractYouTubeId = (text) => {
   return null;
 };
 
+/* ────── Content Moderation Helpers ────── */
+const containsBadWords = (text) => {
+  // अपनी आवश्यकतानुसार शब्द जोड़ें/हटाएँ
+  const badWords = ['gali1', 'gali2', 'mc', 'bc', 'chod', 'bhadwa'];
+  const lower = text.toLowerCase();
+  return badWords.some(word => lower.includes(word));
+};
+
+const containsMaliciousUrl = (text) => {
+  const urlPattern = /https?:\/\/[^\s]+/g;
+  const urls = text.match(urlPattern) || [];
+  // संदिग्ध URL जैसे javascript:, data: या बिना https वाले
+  return urls.some(url => !url.startsWith('https://') || url.includes('javascript:') || url.includes('data:'));
+};
+
 export default function CreatePostPage() {
   const params = useParams();
   const groupId = params.groupId;
@@ -71,6 +86,17 @@ export default function CreatePostPage() {
       toast.error("Please write something");
       return;
     }
+
+    // ✅ कंटेंट मॉडरेशन चेक
+    if (containsBadWords(htmlContent)) {
+      toast.error("Post contains inappropriate language. Please remove it.");
+      return;
+    }
+    if (containsMaliciousUrl(htmlContent)) {
+      toast.error("Post contains suspicious URLs. Please remove them.");
+      return;
+    }
+
     setPosting(true);
     try {
       let imageUrl = "";
