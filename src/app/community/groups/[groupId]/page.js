@@ -1,7 +1,7 @@
 "use client";
 export const dynamic = 'force-dynamic';
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, collection, getDocs, addDoc, updateDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
@@ -37,6 +37,37 @@ const PlusIcon = () => (
 const TrashIcon = () => (
   <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" /></svg>
 );
+const PencilIcon = () => (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+  </svg>
+);
+const BoldIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+    <path d="M6 4h8a4 4 0 014 4 4 4 0 01-4 4H6z" /><path d="M6 12h9a4 4 0 014 4 4 4 0 01-4 4H6z" />
+  </svg>
+);
+const ItalicIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+    <line x1="19" y1="4" x2="10" y2="4" /><line x1="14" y1="20" x2="5" y2="20" /><line x1="15" y1="4" x2="9" y2="20" />
+  </svg>
+);
+const UnderlineIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+    <path d="M6 3v7a6 6 0 006 6 6 6 0 006-6V3" /><line x1="4" y1="21" x2="20" y2="21" />
+  </svg>
+);
+const ListIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+    <line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><circle cx="4" cy="6" r="1" /><circle cx="4" cy="12" r="1" /><circle cx="4" cy="18" r="1" />
+  </svg>
+);
+const EmojiIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="10" /><path d="M8 14s1.5 2 4 2 4-2 4-2" /><line x1="9" y1="9" x2="9.01" y2="9" /><line x1="15" y1="9" x2="15.01" y2="9" />
+  </svg>
+);
 const YouTubeEmbed = ({ videoId }) => (
   <div className="aspect-video rounded-xl overflow-hidden shadow bg-black mt-3">
     <iframe width="100%" height="100%" src={`https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1`} title="YouTube video" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen className="w-full h-full" />
@@ -55,6 +86,9 @@ export default function GroupDetailPage() {
   const [memberCount, setMemberCount] = useState(0);
   const [isMember, setIsMember] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editName, setEditName] = useState("");
+  const editDescRef = useRef(null);
 
   useEffect(() => {
     if (!groupId) return;
@@ -63,7 +97,9 @@ export default function GroupDetailPage() {
       try {
         const groupSnap = await getDoc(doc(db, "groups", groupId));
         if (!groupSnap.exists()) { toast.error("Group not found"); router.push("/community/groups"); return; }
-        setGroup({ id: groupSnap.id, ...groupSnap.data() });
+        const groupData = { id: groupSnap.id, ...groupSnap.data() };
+        setGroup(groupData);
+        setEditName(groupData.name || "");
 
         const membersSnap = await getDocs(collection(db, "groups", groupId, "members"));
         setMemberCount(membersSnap.size);
@@ -103,19 +139,41 @@ export default function GroupDetailPage() {
     toast.success("Invite link copied!");
   };
 
-  // 🗑️ Delete Group Handler
-  const handleDeleteGroup = () => {
-    if (!user) return toast.error("Please login");
-    const isCreator = user.uid === group.createdBy;
-    const isAdminUser = user.isAdmin; // from useAuth (admin check)
-    if (!isCreator && !isAdminUser) {
-      toast.error("You are not authorized to delete this group");
-      return;
+  const canEdit = user && (user.uid === group?.createdBy || user.isAdmin);
+  const canDelete = user && (user.uid === group?.createdBy || user.isAdmin);
+
+  const handleStartEdit = () => {
+    setEditName(group.name);
+    setEditing(true);
+    // set description editor content after render
+    setTimeout(() => {
+      if (editDescRef.current) {
+        editDescRef.current.innerHTML = group.description || "";
+      }
+    }, 50);
+  };
+
+  const handleSaveEdit = async () => {
+    const newName = editName.trim();
+    if (!newName) { toast.error("Group name cannot be empty"); return; }
+    const newDescription = editDescRef.current?.innerHTML || "";
+    try {
+      await updateDoc(doc(db, "groups", groupId), {
+        name: newName,
+        description: newDescription,
+      });
+      setGroup(prev => ({ ...prev, name: newName, description: newDescription }));
+      setEditing(false);
+      toast.success("Group updated!");
+    } catch (err) {
+      toast.error("Failed to update group");
     }
-    // Confirmation – type the creator's user ID
+  };
+
+  const handleDeleteGroup = () => {
+    if (!canDelete) return toast.error("You are not authorized to delete this group");
     const confirmInput = prompt(`To delete this group, enter the creator's User ID:\n(${group.createdBy})`);
     if (confirmInput === group.createdBy) {
-      // proceed with deletion
       if (confirm("Are you absolutely sure? This action cannot be undone.")) {
         deleteDoc(doc(db, "groups", groupId))
           .then(() => {
@@ -129,10 +187,30 @@ export default function GroupDetailPage() {
     }
   };
 
+  const handleToolbar = (cmd, value = null) => {
+    document.execCommand(cmd, false, value);
+    editDescRef.current?.focus();
+  };
+
+  const handleEmoji = () => {
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.style.position = 'fixed';
+    input.style.opacity = 0;
+    document.body.appendChild(input);
+    input.focus();
+    setTimeout(() => {
+      if (input.value === '') {
+        document.execCommand('insertText', false, '😊');
+      } else {
+        document.execCommand('insertText', false, input.value);
+      }
+      input.remove();
+    }, 500);
+  };
+
   if (loading) return <div className="flex justify-center items-center min-h-[50vh]"><div className="animate-spin w-10 h-10 border-4 border-primary-500 border-t-transparent rounded-full" /></div>;
   if (!group) return null;
-
-  const canDelete = user && (user.uid === group.createdBy || user.isAdmin);
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
@@ -147,12 +225,42 @@ export default function GroupDetailPage() {
             )}
           </div>
           <div className="flex-grow">
-            <h1 className="text-2xl font-bold">{group.name}</h1>
-            <div className="prose dark:prose-invert max-w-none text-sm" dangerouslySetInnerHTML={{ __html: group.description }} />
-            <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
-              <span className="flex items-center gap-1"><MembersIcon /> {memberCount} members</span>
-              <span>{group.privacy === 'private' ? 'Private' : 'Public'}</span>
-            </div>
+            {editing ? (
+              <div className="space-y-3">
+                <input
+                  value={editName}
+                  onChange={e => setEditName(e.target.value)}
+                  className="input-field text-2xl font-bold"
+                  placeholder="Group Name"
+                />
+                <div className="flex gap-1 mb-2 flex-wrap">
+                  <button type="button" onClick={() => handleToolbar('bold')} className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700"><BoldIcon /></button>
+                  <button type="button" onClick={() => handleToolbar('italic')} className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700"><ItalicIcon /></button>
+                  <button type="button" onClick={() => handleToolbar('underline')} className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700"><UnderlineIcon /></button>
+                  <button type="button" onClick={() => handleToolbar('insertUnorderedList')} className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700"><ListIcon /></button>
+                  <button type="button" onClick={handleEmoji} className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700"><EmojiIcon /></button>
+                </div>
+                <div
+                  ref={editDescRef}
+                  contentEditable
+                  className="card min-h-[100px] p-4 outline-none text-sm"
+                  style={{ whiteSpace: 'pre-wrap' }}
+                />
+                <div className="flex gap-2 justify-end">
+                  <button onClick={() => setEditing(false)} className="px-4 py-2 border rounded-lg">Cancel</button>
+                  <button onClick={handleSaveEdit} className="btn-gradient">Save Changes</button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <h1 className="text-2xl font-bold">{group.name}</h1>
+                <div className="prose dark:prose-invert max-w-none text-sm" dangerouslySetInnerHTML={{ __html: group.description }} />
+                <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
+                  <span className="flex items-center gap-1"><MembersIcon /> {memberCount} members</span>
+                  <span>{group.privacy === 'private' ? 'Private' : 'Public'}</span>
+                </div>
+              </>
+            )}
           </div>
           <div className="flex gap-2">
             {!isMember && (
@@ -168,12 +276,13 @@ export default function GroupDetailPage() {
                 </Link>
               </>
             )}
-            {canDelete && (
-              <button
-                onClick={handleDeleteGroup}
-                className="p-2 bg-red-100 dark:bg-red-900/30 text-red-500 rounded-lg hover:bg-red-200"
-                title="Delete Group"
-              >
+            {canEdit && !editing && (
+              <button onClick={handleStartEdit} className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg" title="Edit Group">
+                <PencilIcon />
+              </button>
+            )}
+            {canDelete && !editing && (
+              <button onClick={handleDeleteGroup} className="p-2 bg-red-100 dark:bg-red-900/30 text-red-500 rounded-lg" title="Delete Group">
                 <TrashIcon />
               </button>
             )}
@@ -193,7 +302,6 @@ export default function GroupDetailPage() {
       {posts.length === 0 && <p className="text-center text-gray-500 py-12">No posts yet. Be the first to share!</p>}
       <div className="space-y-4">
         {posts.map(post => {
-          // @mention highlight helper
           const renderWithMentions = (text) => {
             if (!text) return "";
             return text.replace(/@([a-zA-Z0-9_.]+)/g, '<span class="text-primary-600 font-medium">@$1</span>');
