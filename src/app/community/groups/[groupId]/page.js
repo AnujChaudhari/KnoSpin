@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic';
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
-import { doc, getDoc, collection, getDocs, addDoc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, collection, getDocs, addDoc, updateDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "react-hot-toast";
 import Link from "next/link";
@@ -42,26 +42,6 @@ const YouTubeEmbed = ({ videoId }) => (
     <iframe width="100%" height="100%" src={`https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1`} title="YouTube video" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen className="w-full h-full" />
   </div>
 );
-
-// @mention को हाइलाइट करने के लिए हेल्पर
-const renderWithMentions = (text) => {
-  if (!text) return "";
-  const mentionRegex = /@([a-zA-Z0-9_.]+)/g;
-  const parts = [];
-  let lastIndex = 0;
-  let match;
-  while ((match = mentionRegex.exec(text)) !== null) {
-    if (match.index > lastIndex) {
-      parts.push(text.substring(lastIndex, match.index));
-    }
-    parts.push(`<span class="text-primary-600 font-medium">@${match[1]}</span>`);
-    lastIndex = match.index + match[0].length;
-  }
-  if (lastIndex < text.length) {
-    parts.push(text.substring(lastIndex));
-  }
-  return parts.join('');
-};
 
 export default function GroupDetailPage() {
   const params = useParams();
@@ -123,15 +103,42 @@ export default function GroupDetailPage() {
     toast.success("Invite link copied!");
   };
 
+  // 🗑️ Delete Group Handler
+  const handleDeleteGroup = () => {
+    if (!user) return toast.error("Please login");
+    const isCreator = user.uid === group.createdBy;
+    const isAdminUser = user.isAdmin; // from useAuth (admin check)
+    if (!isCreator && !isAdminUser) {
+      toast.error("You are not authorized to delete this group");
+      return;
+    }
+    // Confirmation – type the creator's user ID
+    const confirmInput = prompt(`To delete this group, enter the creator's User ID:\n(${group.createdBy})`);
+    if (confirmInput === group.createdBy) {
+      // proceed with deletion
+      if (confirm("Are you absolutely sure? This action cannot be undone.")) {
+        deleteDoc(doc(db, "groups", groupId))
+          .then(() => {
+            toast.success("Group deleted successfully");
+            router.push("/community/groups");
+          })
+          .catch(err => toast.error("Failed to delete group"));
+      }
+    } else if (confirmInput !== null) {
+      toast.error("User ID did not match. Group not deleted.");
+    }
+  };
+
   if (loading) return <div className="flex justify-center items-center min-h-[50vh]"><div className="animate-spin w-10 h-10 border-4 border-primary-500 border-t-transparent rounded-full" /></div>;
   if (!group) return null;
+
+  const canDelete = user && (user.uid === group.createdBy || user.isAdmin);
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
       {/* Group Header */}
       <div className="card mb-6">
         <div className="flex items-start gap-4">
-          {/* ✅ ग्रुप आइकन – इमेज या SVG */}
           <div className="w-14 h-14 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 flex-shrink-0 overflow-hidden">
             {group.iconUrl ? (
               <img src={group.iconUrl} alt={group.name} className="w-full h-full object-cover" />
@@ -141,8 +148,7 @@ export default function GroupDetailPage() {
           </div>
           <div className="flex-grow">
             <h1 className="text-2xl font-bold">{group.name}</h1>
-            {/* ✅ रिच टेक्स्ट डिस्क्रिप्शन */}
-            <div className="text-gray-500 prose dark:prose-invert max-w-none text-sm" dangerouslySetInnerHTML={{ __html: group.description }} />
+            <div className="prose dark:prose-invert max-w-none text-sm" dangerouslySetInnerHTML={{ __html: group.description }} />
             <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
               <span className="flex items-center gap-1"><MembersIcon /> {memberCount} members</span>
               <span>{group.privacy === 'private' ? 'Private' : 'Public'}</span>
@@ -162,6 +168,15 @@ export default function GroupDetailPage() {
                 </Link>
               </>
             )}
+            {canDelete && (
+              <button
+                onClick={handleDeleteGroup}
+                className="p-2 bg-red-100 dark:bg-red-900/30 text-red-500 rounded-lg hover:bg-red-200"
+                title="Delete Group"
+              >
+                <TrashIcon />
+              </button>
+            )}
           </div>
         </div>
         {showInvite && (
@@ -177,39 +192,45 @@ export default function GroupDetailPage() {
       {/* Post Feed */}
       {posts.length === 0 && <p className="text-center text-gray-500 py-12">No posts yet. Be the first to share!</p>}
       <div className="space-y-4">
-        {posts.map(post => (
-          <div key={post.id} className="card">
-            <div className="flex justify-between items-start mb-3">
-              <div>
-                <span className="font-medium">{post.authorName}</span>
-                <span className="text-xs text-gray-400 ml-2">{new Date(post.createdAt?.toDate()).toLocaleString()}</span>
-              </div>
-              <div className="flex gap-2">
-                <button onClick={() => {
-                  if (navigator.share) {
-                    navigator.share({ title: 'Check this post', url: `${window.location.origin}/community/groups/${groupId}?post=${post.id}` }).catch(() => {});
-                  } else {
-                    navigator.clipboard.writeText(`${window.location.origin}/community/groups/${groupId}?post=${post.id}`);
-                    toast.success("Post link copied!");
-                  }
-                }} className="text-gray-400 hover:text-primary-600"><ShareIcon /></button>
-                {user && (user.uid === post.authorId || user.isAdmin) && (
-                  <button onClick={async () => {
-                    if (confirm("Delete post?")) {
-                      await updateDoc(doc(db, "posts", post.id), { isDeleted: true });
-                      setPosts(posts.filter(p => p.id !== post.id));
-                      toast.success("Post deleted");
+        {posts.map(post => {
+          // @mention highlight helper
+          const renderWithMentions = (text) => {
+            if (!text) return "";
+            return text.replace(/@([a-zA-Z0-9_.]+)/g, '<span class="text-primary-600 font-medium">@$1</span>');
+          };
+          return (
+            <div key={post.id} className="card">
+              <div className="flex justify-between items-start mb-3">
+                <div>
+                  <span className="font-medium">{post.authorName}</span>
+                  <span className="text-xs text-gray-400 ml-2">{new Date(post.createdAt?.toDate()).toLocaleString()}</span>
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => {
+                    if (navigator.share) {
+                      navigator.share({ title: 'Check this post', url: `${window.location.origin}/community/groups/${groupId}?post=${post.id}` }).catch(() => {});
+                    } else {
+                      navigator.clipboard.writeText(`${window.location.origin}/community/groups/${groupId}?post=${post.id}`);
+                      toast.success("Post link copied!");
                     }
-                  }} className="text-gray-400 hover:text-red-500"><TrashIcon /></button>
-                )}
+                  }} className="text-gray-400 hover:text-primary-600"><ShareIcon /></button>
+                  {user && (user.uid === post.authorId || user.isAdmin) && (
+                    <button onClick={async () => {
+                      if (confirm("Delete post?")) {
+                        await updateDoc(doc(db, "posts", post.id), { isDeleted: true });
+                        setPosts(posts.filter(p => p.id !== post.id));
+                        toast.success("Post deleted");
+                      }
+                    }} className="text-gray-400 hover:text-red-500"><TrashIcon /></button>
+                  )}
+                </div>
               </div>
+              <div className="prose dark:prose-invert max-w-none text-sm" dangerouslySetInnerHTML={{ __html: renderWithMentions(post.text) }} />
+              {post.imageUrl && <img src={post.imageUrl} alt="Post attachment" className="mt-3 rounded-xl max-h-96 object-contain w-full" />}
+              {post.videoId && <YouTubeEmbed videoId={post.videoId} />}
             </div>
-            {/* ✅ @mention हाइलाइटेड टेक्स्ट */}
-            <div className="prose dark:prose-invert max-w-none text-sm" dangerouslySetInnerHTML={{ __html: renderWithMentions(post.text) }} />
-            {post.imageUrl && <img src={post.imageUrl} alt="Post attachment" className="mt-3 rounded-xl max-h-96 object-contain w-full" />}
-            {post.videoId && <YouTubeEmbed videoId={post.videoId} />}
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
