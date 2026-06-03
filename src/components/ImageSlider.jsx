@@ -3,6 +3,18 @@ import { useState, useRef } from "react";
 import { HiChevronLeft, HiChevronRight, HiZoomIn, HiZoomOut, HiX } from "react-icons/hi";
 import { motion, AnimatePresence } from "framer-motion";
 
+// इनलाइन SVG प्लेसहोल्डर (जब कोई इमेज न हो)
+const EmptyImagePlaceholder = () => (
+  <svg className="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" strokeWidth="1" viewBox="0 0 24 24">
+    <rect width="24" height="24" rx="3" fill="none" />
+    <circle cx="8.5" cy="8.5" r="1.5" />
+    <polyline points="21 15 16 10 5 21" />
+  </svg>
+);
+
+// इमेज लोड न होने पर दिखाने के लिए एक सादा डेटा URL (SVG)
+const FALLBACK_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Crect width='300' height='300' fill='%23e2e8f0'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%2394a3b8' font-size='20'%3ENo Image%3C/text%3E%3C/svg%3E";
+
 export default function ImageSlider({ images }) {
   const [current, setCurrent] = useState(0);
   const [isZoomed, setIsZoomed] = useState(false);
@@ -10,10 +22,11 @@ export default function ImageSlider({ images }) {
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
 
+  // अगर images एरे खाली या undefined है
   if (!images || images.length === 0) {
     return (
-      <div className="w-full h-80 bg-gray-100 dark:bg-gray-700 rounded-2xl flex items-center justify-center text-gray-400">
-        No Image
+      <div className="w-full h-80 bg-gray-100 dark:bg-gray-700 rounded-2xl flex items-center justify-center">
+        <EmptyImagePlaceholder />
       </div>
     );
   }
@@ -21,7 +34,7 @@ export default function ImageSlider({ images }) {
   const prev = () => setCurrent((prev) => (prev === 0 ? images.length - 1 : prev - 1));
   const next = () => setCurrent((prev) => (prev === images.length - 1 ? 0 : prev + 1));
 
-  // Touch swipe handlers
+  // टच स्वाइप
   const handleTouchStart = (e) => {
     touchStartX.current = e.touches[0].clientX;
   };
@@ -59,6 +72,7 @@ export default function ImageSlider({ images }) {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.3 }}
+            onError={(e) => { e.target.src = FALLBACK_IMAGE; }}
           />
         </AnimatePresence>
 
@@ -101,7 +115,12 @@ export default function ImageSlider({ images }) {
                   : "border-gray-200 dark:border-gray-600 opacity-60 hover:opacity-100"
               }`}
             >
-              <img src={img} alt={`Thumbnail ${idx + 1}`} className="w-full h-full object-cover" />
+              <img
+                src={img}
+                alt={`Thumbnail ${idx + 1}`}
+                className="w-full h-full object-cover"
+                onError={(e) => { e.target.src = FALLBACK_IMAGE; }}
+              />
             </button>
           ))}
         </div>
@@ -119,6 +138,7 @@ export default function ImageSlider({ images }) {
               alt="Zoomed product"
               className="max-w-full max-h-[80vh] object-contain transition-transform duration-200"
               style={{ transform: `scale(${zoomLevel})` }}
+              onError={(e) => { e.target.src = FALLBACK_IMAGE; }}
             />
             <div className="absolute top-4 right-4 flex gap-2">
               <button onClick={zoomIn} className="bg-white/90 p-2 rounded-full shadow"><HiZoomIn /></button>
