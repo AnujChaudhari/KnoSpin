@@ -35,7 +35,7 @@ export default function RootLayout({ children }) {
         {/* PWA manifest */}
         <link rel="manifest" href="/manifest.json" />
         {/* favicon */}
-        <link rel="icon" href="/logo.jpg" />
+        <link rel="icon" href="/logo.png" />
       </head>
       <body className={`${inter.className} min-h-screen flex flex-col`}>
         <ClientProviders>{children}</ClientProviders>
