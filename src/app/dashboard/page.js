@@ -1,14 +1,19 @@
 "use client";
 export const dynamic = 'force-dynamic';
 
-import { HiShoppingBag, HiUser, HiCurrencyRupee, HiShare, HiTrophy, HiBell } from "react-icons/hi";
 import { useAuth } from "@/context/AuthContext";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
-/* ────────── प्रीमियम SVG आइकॉन (अब GroupIcon सहित) ────────── */
+/* ────────── Inline SVG Icons ────────── */
+const BellIcon = () => (
+  <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+    <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
+    <path d="M13.73 21a2 2 0 01-3.46 0" />
+  </svg>
+);
 const OrderIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" className="w-7 h-7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
     <path d="M16 3H3v18h18V8l-5-5z" /><path d="M16 3v5h5" /><path d="M8 13h8" /><path d="M8 17h5" />
@@ -92,9 +97,9 @@ export default function DashboardPage() {
     { href: "/dashboard/wallet", label: "My Wallet", icon: <WalletIcon />, desc: "Balance, coins & transactions", color: "from-green-500 to-emerald-500", bgLight: "bg-green-50 dark:bg-green-900/20", textColor: "text-green-600 dark:text-green-400" },
     { href: "/leaderboard", label: "Leaderboard", icon: <LeaderboardIcon />, desc: "Top referrers & rankings", color: "from-yellow-500 to-amber-500", bgLight: "bg-yellow-50 dark:bg-yellow-900/20", textColor: "text-yellow-600 dark:text-yellow-400" },
     { href: "/dashboard/achievements", label: "Achievements", icon: <TrophyIcon />, desc: "Your unlocked badges & rewards", color: "from-rose-500 to-pink-500", bgLight: "bg-rose-50 dark:bg-rose-900/20", textColor: "text-rose-600 dark:text-rose-400" },
-    { href: "/dashboard/notifications", label: "Notifications", icon: <HiBell className="text-2xl"/>, desc: "View all alerts" },
+    { href: "/dashboard/notifications", label: "Notifications", icon: <BellIcon />, desc: "View all alerts" },
     { href: "/dashboard/my-courses", label: "My Courses", icon: <BookOpenIcon />, desc: "Enrolled courses & progress", color: "from-teal-500 to-cyan-500", bgLight: "bg-teal-50 dark:bg-teal-900/20", textColor: "text-teal-600 dark:text-teal-400" },
-    { href: "/dashboard/my-groups", label: "My Groups", icon: <GroupIcon />, desc: "Your community groups", color: "from-sky-500 to-cyan-500", bgLight: "bg-sky-50 dark:bg-sky-900/20", textColor: "text-sky-600 dark:text-sky-400" },   // ✅ नया
+    { href: "/dashboard/my-groups", label: "My Groups", icon: <GroupIcon />, desc: "Your community groups", color: "from-sky-500 to-cyan-500", bgLight: "bg-sky-50 dark:bg-sky-900/20", textColor: "text-sky-600 dark:text-sky-400" },
   ];
 
   return (
@@ -148,7 +153,7 @@ export default function DashboardPage() {
             href={item.href}
             className="group relative overflow-hidden rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-5 flex items-center gap-5 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300"
           >
-            <div className={`w-14 h-14 rounded-2xl ${item.bgLight} flex items-center justify-center ${item.textColor} group-hover:scale-110 transition-transform duration-300`}>
+            <div className={`w-14 h-14 rounded-2xl ${item.bgLight || 'bg-gray-50 dark:bg-gray-700'} flex items-center justify-center ${item.textColor || 'text-gray-600 dark:text-gray-300'} group-hover:scale-110 transition-transform duration-300`}>
               {item.icon}
             </div>
             <div className="flex-grow">
