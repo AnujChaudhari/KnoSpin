@@ -40,7 +40,7 @@ export default function Header() {
         {/* लोगो + टेक्स्ट */}
         <Link href="/" className="flex items-center gap-2">
           <img
-            src="/logo.jpg"
+            src="/logo.png"
             alt="Quick Shop"
             className="h-7 md:h-8 w-auto"
           />
