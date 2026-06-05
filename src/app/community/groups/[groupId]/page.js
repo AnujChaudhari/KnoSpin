@@ -9,7 +9,7 @@ import { useAuth } from "@/context/AuthContext";
 import { toast } from "react-hot-toast";
 import Link from "next/link";
 
-/* ────── Inline SVG Icons (unchanged) ────── */
+/* ────── Inline SVG Icons ────── */
 const GroupIcon = () => (
   <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
     <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87" /><path d="M16 3.13a4 4 0 010 7.75" />
@@ -214,9 +214,10 @@ export default function GroupDetailPage() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
-      {/* Group Header */}
-      <div className="card mb-6">
-        <div className="flex items-start gap-4">
+      {/* Group Header - fully responsive, no cut off */}
+      <div className="card mb-6 overflow-hidden">
+        <div className="flex flex-wrap items-start gap-4">
+          {/* Icon - fixed size, doesn't shrink */}
           <div className="w-14 h-14 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 flex-shrink-0 overflow-hidden">
             {group.iconUrl ? (
               <img src={group.iconUrl} alt={group.name} className="w-full h-full object-cover" />
@@ -224,13 +225,15 @@ export default function GroupDetailPage() {
               <GroupIcon />
             )}
           </div>
-          <div className="flex-grow min-w-0">
+
+          {/* Group info - takes remaining space, shrinks safely */}
+          <div className="flex-1 min-w-0">
             {editing ? (
               <div className="space-y-3">
                 <input
                   value={editName}
                   onChange={e => setEditName(e.target.value)}
-                  className="input-field text-2xl font-bold"
+                  className="input-field text-2xl font-bold w-full"
                   placeholder="Group Name"
                 />
                 <div className="flex gap-1 mb-2 flex-wrap">
@@ -243,10 +246,10 @@ export default function GroupDetailPage() {
                 <div
                   ref={editDescRef}
                   contentEditable
-                  className="card min-h-[100px] p-4 outline-none text-sm"
+                  className="card min-h-[100px] p-4 outline-none text-sm break-words"
                   style={{ whiteSpace: 'pre-wrap' }}
                 />
-                <div className="flex gap-2 justify-end">
+                <div className="flex gap-2 justify-end flex-wrap">
                   <button onClick={() => setEditing(false)} className="px-4 py-2 border rounded-lg">Cancel</button>
                   <button onClick={handleSaveEdit} className="btn-gradient">Save Changes</button>
                 </div>
@@ -254,12 +257,12 @@ export default function GroupDetailPage() {
             ) : (
               <>
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white break-words">{group.name}</h1>
-                {/* Description with Read More (works perfectly in dark mode) */}
-                <div className="prose dark:prose-invert max-w-none text-sm text-gray-700 dark:text-gray-300 mt-2">
+                {/* Description with Read More - ensures no overflow */}
+                <div className="prose dark:prose-invert max-w-none text-sm text-gray-700 dark:text-gray-300 mt-2 break-words">
                   {showFullDescription ? (
-                    <div dangerouslySetInnerHTML={{ __html: group.description }} />
+                    <div dangerouslySetInnerHTML={{ __html: group.description || '' }} />
                   ) : (
-                    <div className="line-clamp-3" dangerouslySetInnerHTML={{ __html: group.description }} />
+                    <div className="line-clamp-3" dangerouslySetInnerHTML={{ __html: group.description || '' }} />
                   )}
                 </div>
                 {group.description && group.description.replace(/<[^>]*>/g, '').length > 150 && (
@@ -277,20 +280,21 @@ export default function GroupDetailPage() {
               </>
             )}
           </div>
-          {/* Action Buttons – mobile friendly */}
-          <div className="flex items-center gap-1 flex-shrink-0">
+
+          {/* Action Buttons - wraps on mobile, doesn't cut */}
+          <div className="flex items-center gap-1 flex-shrink-0 flex-wrap justify-end">
             {!isMember && (
               <button onClick={handleJoin} className="btn-gradient text-sm px-3 py-1.5">Join</button>
             )}
             {isMember && (
-              <div className="flex items-center gap-1">
+              <>
                 <button onClick={() => setShowInvite(!showInvite)} className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg" title="Invite">
                   <ShareIcon />
                 </button>
                 <Link href={`/community/groups/${groupId}/post/create`} className="btn-gradient text-sm flex items-center gap-1 px-3 py-1.5">
                   <PlusIcon /> <span className="hidden sm:inline">Post</span>
                 </Link>
-              </div>
+              </>
             )}
             {canEdit && !editing && (
               <button onClick={handleStartEdit} className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg" title="Edit Group">
@@ -304,6 +308,8 @@ export default function GroupDetailPage() {
             )}
           </div>
         </div>
+
+        {/* Invite section - already responsive */}
         {showInvite && (
           <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
             <code className="text-xs sm:text-sm break-all">{`https://quickshoppro.vercel.app/community/groups/join?invite=${group.inviteCode}`}</code>
@@ -324,7 +330,7 @@ export default function GroupDetailPage() {
           };
           return (
             <div key={post.id} className="card">
-              <div className="flex justify-between items-start mb-3">
+              <div className="flex justify-between items-start mb-3 flex-wrap gap-2">
                 <div>
                   <span className="font-medium dark:text-white">{post.authorName}</span>
                   <span className="text-xs text-gray-400 ml-2">{new Date(post.createdAt?.toDate()).toLocaleString()}</span>
@@ -349,17 +355,8 @@ export default function GroupDetailPage() {
                   )}
                 </div>
               </div>
-              <div className="prose dark:prose-invert max-w-none text-sm dark:text-gray-200" dangerouslySetInnerHTML={{ __html: renderWithMentions(post.text) }} />
+              <div className="prose dark:prose-invert max-w-none text-sm dark:text-gray-200 break-words" dangerouslySetInnerHTML={{ __html: renderWithMentions(post.text) }} />
               {post.imageUrl && <img src={post.imageUrl} alt="Post attachment" className="mt-3 rounded-xl max-h-96 object-contain w-full" />}
-              {post.videoId && <YouTubeEmbed videoId={post.videoId} />}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-```-full" />}
               {post.videoId && <YouTubeEmbed videoId={post.videoId} />}
             </div>
           );
