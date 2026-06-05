@@ -1,15 +1,65 @@
 "use client";
-export const dynamic = 'force-dynamic';
 
-import { useEffect, useState, useRef } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { db } from "@/lib/firebase";
-import { doc, getDoc, collection, getDocs, addDoc, updateDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
-import { useAuth } from "@/context/AuthContext";
-import { toast } from "react-hot-toast";
-import Link from "next/link";
+import React, { useEffect, useState, useRef } from "react";
 
-/* ────── Inline SVG Icons ────── */
+// Mocking toast
+const toast = {
+  success: (msg) => console.log("Toast Success:", msg),
+  error: (msg) => console.error("Toast Error:", msg)
+};
+
+// Mocking next/navigation
+const useParams = () => ({ groupId: "mock-group-123" });
+const useRouter = () => ({ push: (url) => console.log("Navigating to:", url) });
+
+// Mocking next/link
+const Link = ({ href, children, className }) => (
+  <a href={href} className={className} onClick={(e) => { e.preventDefault(); console.log("Link clicked:", href); }}>
+    {children}
+  </a>
+);
+
+// Mocking Firebase Auth Context
+const useAuth = () => ({
+  user: { uid: "mock-user-1", isAdmin: true },
+});
+
+// Mocking Firebase Firestore
+const db = {};
+const doc = () => ({});
+const getDoc = async () => ({
+  exists: () => true,
+  id: "mock-group-123",
+  data: () => ({
+    name: "TRS Helper",
+    description: `ओए TRS वीरों 🙌<br/><br/>मैं भी तुम्हीं में से एक हूँ - क्लास में बैक बेंच पर (या कभी फ्रंट में जब अटेंडेंस कम हो), प्रोजेक्ट्स की टेंशन में, साइड में कुछ नया सीखने का चक्कर। साथ ही थोड़ा मार्केटिंग का शौक है। तो दोनों मिलाकर लेकर आया हूँ ये ग्रुप।<br/><br/>बात ये है:<br/>मैंने एक क्विकशॉप बनाया है - नाम सुनके मत उलझना, यहाँ चाय-बिस्किट नहीं बिकता। यहाँ बिकते हैं:<br/><br/><b>कोर्स</b> (वो वाले जो तुम्हें असली पैसे कमाना सिखाएँ - प्रोग्रामिंग, मार्केटिंग, डिज़ाइन, फ्रीलांसिंग)<br/><b>डिजिटल प्रोडक्ट्स</b> (रेडीमेड नोट्स, टेम्पलेट, प्रोजेक्ट आइडियाज, चीटशीट - जो तुम्हारा समय बचाएँ)<br/><b>फिजिकल प्रोडक्ट्स</b> (वो गैजेट्स या एक्सेसरीज़ जो तुम ढूंढ रहे हो)`,
+    createdBy: "mock-user-1",
+    inviteCode: "abc-123-xyz",
+    privacy: "public",
+    iconUrl: "https://via.placeholder.com/150"
+  })
+});
+const collection = () => ({});
+const getDocs = async () => ({
+  size: 42,
+  docs: [
+    {
+       id: "post-1",
+       data: () => ({
+         authorName: "Amit Kumar",
+         authorId: "user-2",
+         text: "Has anyone started working on the final year project?",
+         createdAt: { toDate: () => new Date(), toMillis: () => Date.now() }
+       })
+    }
+  ]
+});
+const addDoc = async () => ({ id: "new-doc-id" });
+const updateDoc = async () => {};
+const deleteDoc = async () => {};
+const serverTimestamp = () => new Date();
+
+
 const GroupIcon = () => (
   <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
     <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87" /><path d="M16 3.13a4 4 0 010 7.75" />
@@ -73,8 +123,9 @@ const DotsVerticalIcon = () => (
     <circle cx="12" cy="12" r="1" /><circle cx="12" cy="5" r="1" /><circle cx="12" cy="19" r="1" />
   </svg>
 );
+
 const YouTubeEmbed = ({ videoId }) => (
-  <div className="aspect-video rounded-xl overflow-hidden shadow bg-black mt-3">
+  <div className="aspect-video rounded-xl overflow-hidden shadow bg-black mt-3 w-full">
     <iframe width="100%" height="100%" src={`https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1`} title="YouTube video" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen className="w-full h-full" />
   </div>
 );
@@ -89,21 +140,30 @@ export default function GroupDetailPage() {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [memberCount, setMemberCount] = useState(0);
-  const [isMember, setIsMember] = useState(false);
+  const [isMember, setIsMember] = useState(true); // Default to true for preview
   const [showInvite, setShowInvite] = useState(false);
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState("");
-  const [showMenu, setShowMenu] = useState(false);
+  const [showMenu, setShowMenu] = useState(false); // State for 3-dot menu
+  const [isDarkMode, setIsDarkMode] = useState(false); // Toggle for previewing dark mode
+
   const editDescRef = useRef(null);
   const menuRef = useRef(null);
 
   useEffect(() => {
-    const handleClickOutside = (event) => {
+    // Check system preference for dark mode initially
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      setIsDarkMode(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
         setShowMenu(false);
       }
-    };
+    }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
@@ -121,14 +181,13 @@ export default function GroupDetailPage() {
 
         const membersSnap = await getDocs(collection(db, "groups", groupId, "members"));
         setMemberCount(membersSnap.size);
-        if (user) {
-          const already = membersSnap.docs.some(d => d.data().userId === user.uid);
-          setIsMember(already);
-        }
+        
+        // Mocking member check based on the mock data size
+        setIsMember(membersSnap.size > 0);
 
         const postsSnap = await getDocs(collection(db, "posts"));
         const allPosts = postsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        const groupPosts = allPosts.filter(p => p.groupId === groupId && !p.isDeleted);
+        const groupPosts = allPosts; // In mock, just use all
         groupPosts.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
         setPosts(groupPosts);
       } catch (err) { console.error(err); toast.error("Failed to load group"); }
@@ -161,7 +220,7 @@ export default function GroupDetailPage() {
   const canDelete = user && (user.uid === group?.createdBy || user.isAdmin);
 
   const handleStartEdit = () => {
-    setShowMenu(false);
+    setShowMenu(false); // Close menu when starting edit
     setEditName(group.name);
     setEditing(true);
     setTimeout(() => {
@@ -189,7 +248,7 @@ export default function GroupDetailPage() {
   };
 
   const handleDeleteGroup = () => {
-    setShowMenu(false);
+    setShowMenu(false); // Close menu before deleting
     if (!canDelete) return toast.error("You are not authorized to delete this group");
     const confirmInput = prompt(`To delete this group, enter the creator's User ID:\n(${group.createdBy})`);
     if (confirmInput === group.createdBy) {
@@ -228,73 +287,103 @@ export default function GroupDetailPage() {
     }, 500);
   };
 
-  if (loading) return <div className="flex justify-center items-center min-h-[50vh]"><div className="animate-spin w-10 h-10 border-4 border-primary-500 border-t-transparent rounded-full" /></div>;
+  if (loading) return <div className="flex justify-center items-center min-h-[50vh]"><div className="animate-spin w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full" /></div>;
   if (!group) return null;
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8">
-      {/* Group Header Card */}
-      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-800 mb-6 overflow-hidden transition-colors duration-200">
-        <div className="p-5 md:p-6">
-          {/* Top row: Icon + Name + 3-dot menu */}
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center gap-4 flex-1 min-w-0">
-              <div className="w-14 h-14 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 flex-shrink-0 overflow-hidden">
+    // Added a wrapper to force dark mode based on state for preview purposes,
+    // usually handled by 'next-themes' or a global wrapper.
+    <div className={`${isDarkMode ? 'dark bg-slate-900 min-h-screen' : 'bg-gray-50 min-h-screen'}`}>
+      {/* Temporary Toggle for Preview */}
+      <button 
+        onClick={() => setIsDarkMode(!isDarkMode)} 
+        className="fixed bottom-4 right-4 z-50 p-3 bg-blue-600 text-white rounded-full shadow-lg"
+      >
+        Toggle {isDarkMode ? 'Light' : 'Dark'} Mode
+      </button>
+
+      <div className="max-w-3xl mx-auto px-3 sm:px-4 py-4 sm:py-8 w-full overflow-hidden">
+        
+        {/* Group Header Card */}
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-4 mb-6 relative">
+          
+          {/* Top Row: Icon, Name, and Actions/Menu */}
+          <div className="flex items-start justify-between gap-3 w-full">
+            
+            {/* Left Side: Icon & Title Area */}
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+               {/* Group Icon */}
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 flex-shrink-0 overflow-hidden shadow-sm">
                 {group.iconUrl ? (
                   <img src={group.iconUrl} alt={group.name} className="w-full h-full object-cover" />
                 ) : (
                   <GroupIcon />
                 )}
               </div>
+
+              {/* Title container - ensures it stays on one line nicely */}
               <div className="flex-1 min-w-0">
-                {editing ? (
-                  <input
-                    value={editName}
-                    onChange={e => setEditName(e.target.value)}
-                    className="input-field text-2xl font-bold w-full"
-                    placeholder="Group Name"
-                  />
-                ) : (
-                  <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white truncate">
-                    {group.name}
-                  </h1>
-                )}
-                {!editing && (
-                  <div className="flex flex-wrap items-center gap-3 mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    <span className="flex items-center gap-1"><MembersIcon /> {memberCount} members</span>
-                    <span className="capitalize">{group.privacy}</span>
-                  </div>
-                )}
+                 {editing ? (
+                    <input
+                      value={editName}
+                      onChange={e => setEditName(e.target.value)}
+                      className="w-full px-3 py-2 bg-gray-50 dark:bg-slate-900 border border-gray-300 dark:border-slate-600 rounded-lg text-xl sm:text-2xl font-bold text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Group Name"
+                    />
+                 ) : (
+                   <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white truncate">
+                     {group.name}
+                   </h1>
+                 )}
+                 
+                 {/* Member count directly under name */}
+                 {!editing && (
+                   <div className="flex items-center gap-3 mt-1 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                      <span className="flex items-center gap-1"><MembersIcon /> {memberCount} members</span>
+                      <span className="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-slate-700 text-xs font-medium">
+                        {group.privacy === 'private' ? 'Private' : 'Public'}
+                      </span>
+                   </div>
+                 )}
               </div>
             </div>
 
-            {/* 3-dot menu (Edit/Delete) */}
-            {!editing && (canEdit || canDelete) && (
-              <div className="relative flex-shrink-0" ref={menuRef}>
-                <button
-                  onClick={() => setShowMenu(!showMenu)}
-                  className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
-                  aria-label="Group options"
-                >
-                  <DotsVerticalIcon />
-                </button>
-                {showMenu && (
-                  <div className="absolute right-0 mt-2 w-44 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 z-10 py-1">
-                    {canEdit && (
-                      <button
-                        onClick={handleStartEdit}
-                        className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
-                      >
-                        <PencilIcon /> Edit Group
-                      </button>
-                    )}
-                    {canDelete && (
-                      <button
-                        onClick={handleDeleteGroup}
-                        className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition"
-                      >
-                        <TrashIcon /> Delete Group
-                      </button>
+            {/* Right Side: Action Buttons and 3-Dot Menu */}
+            {!editing && (
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {/* Desktop view primary actions (Share/Post) can go here if space permits, 
+                    but sticking to your request: Share/Post below, Menu here */}
+                
+                {(canEdit || canDelete) && (
+                  <div className="relative" ref={menuRef}>
+                    <button 
+                      onClick={() => setShowMenu(!showMenu)} 
+                      className="p-2 -mr-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-full transition-colors"
+                      aria-label="Group options"
+                    >
+                      <DotsVerticalIcon />
+                    </button>
+                    
+                    {/* Dropdown Menu */}
+                    {showMenu && (
+                      <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 overflow-hidden z-20">
+                        {canEdit && (
+                          <button 
+                            onClick={handleStartEdit} 
+                            className="w-full text-left px-4 py-3 flex items-center gap-3 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+                          >
+                            <PencilIcon /> Edit Group
+                          </button>
+                        )}
+                        {canDelete && (
+                          <button 
+                            onClick={handleDeleteGroup} 
+                            className="w-full text-left px-4 py-3 flex items-center gap-3 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                          >
+                            <TrashIcon /> Delete Group
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
                 )}
@@ -302,130 +391,147 @@ export default function GroupDetailPage() {
             )}
           </div>
 
-          {/* Action Buttons: Share & Post (only if member) */}
+          {/* Action Buttons Row (Share / Post) */}
           {!editing && isMember && (
-            <div className="flex items-center justify-end gap-3 mt-5 pt-4 border-t border-gray-100 dark:border-gray-800">
-              <button
-                onClick={() => setShowInvite(!showInvite)}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-lg text-gray-800 dark:text-gray-200 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition"
-              >
-                <ShareIcon /> Share
-              </button>
-              <Link
-                href={`/community/groups/${groupId}/post/create`}
-                className="flex items-center gap-2 px-5 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium transition shadow-sm"
-              >
-                <PlusIcon /> Post
-              </Link>
-            </div>
+              <div className="flex items-center justify-end gap-3 mt-4 pt-4 border-t border-gray-100 dark:border-slate-700">
+                  <button 
+                      onClick={() => setShowInvite(!showInvite)} 
+                      className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-800 dark:text-gray-200 rounded-lg font-medium transition-colors text-sm"
+                  >
+                    <ShareIcon /> Share
+                  </button>
+                  <Link 
+                      href={`/community/groups/${groupId}/post/create`} 
+                      className="flex items-center justify-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors shadow-sm text-sm"
+                  >
+                    <PlusIcon /> Post
+                  </Link>
+              </div>
           )}
 
-          {/* Join button for non-members */}
           {!editing && !isMember && (
-            <div className="flex justify-end mt-5 pt-4 border-t border-gray-100 dark:border-gray-800">
-              <button onClick={handleJoin} className="btn-gradient text-sm px-5 py-2">
-                Join Group
-              </button>
-            </div>
+             <div className="mt-4 pt-4 border-t border-gray-100 dark:border-slate-700 flex justify-end">
+                 <button onClick={handleJoin} className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors shadow-sm text-sm">
+                    Join Group
+                 </button>
+             </div>
           )}
 
-          {/* Invite link section */}
+          {/* Invite Link Display */}
           {showInvite && !editing && (
-            <div className="mt-5 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-              <code className="text-xs break-all text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-900 px-2 py-1 rounded border border-gray-200 dark:border-gray-700 w-full overflow-x-auto">
-                {`https://quickshoppro.vercel.app/community/groups/join?invite=${group.inviteCode}`}
+            <div className="mt-4 p-3 bg-gray-50 dark:bg-slate-900 rounded-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border border-gray-200 dark:border-slate-700">
+              <code className="text-xs text-gray-700 dark:text-gray-300 break-all bg-white dark:bg-slate-800 px-2 py-1 rounded border border-gray-300 dark:border-slate-600 w-full sm:w-auto overflow-x-auto">
+                  {`https://quickshoppro.vercel.app/community/groups/join?invite=${group.inviteCode}`}
               </code>
-              <button onClick={copyInviteLink} className="btn-gradient text-xs px-3 py-1.5 flex items-center gap-1 flex-shrink-0">
+              <button onClick={copyInviteLink} className="w-full sm:w-auto px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-800 dark:text-gray-200 rounded-lg text-xs font-medium flex items-center justify-center gap-2 transition-colors flex-shrink-0">
                 <CopyIcon /> Copy
               </button>
             </div>
           )}
 
-          {/* Edit Mode */}
+          {/* Edit Form Area */}
           {editing && (
-            <div className="mt-5 pt-4 border-t border-gray-100 dark:border-gray-800">
-              <div className="flex gap-1 mb-3 flex-wrap">
-                <button type="button" onClick={() => handleToolbar('bold')} className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800"><BoldIcon /></button>
-                <button type="button" onClick={() => handleToolbar('italic')} className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800"><ItalicIcon /></button>
-                <button type="button" onClick={() => handleToolbar('underline')} className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800"><UnderlineIcon /></button>
-                <button type="button" onClick={() => handleToolbar('insertUnorderedList')} className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800"><ListIcon /></button>
-                <button type="button" onClick={handleEmoji} className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800"><EmojiIcon /></button>
+            <div className="mt-4 border-t border-gray-200 dark:border-slate-700 pt-4">
+              <div className="flex gap-1 mb-3 flex-wrap bg-gray-50 dark:bg-slate-900 p-2 rounded-lg border border-gray-200 dark:border-slate-700">
+                <button type="button" onClick={() => handleToolbar('bold')} className="p-2 rounded hover:bg-gray-200 dark:hover:bg-slate-800 text-gray-700 dark:text-gray-300"><BoldIcon /></button>
+                <button type="button" onClick={() => handleToolbar('italic')} className="p-2 rounded hover:bg-gray-200 dark:hover:bg-slate-800 text-gray-700 dark:text-gray-300"><ItalicIcon /></button>
+                <button type="button" onClick={() => handleToolbar('underline')} className="p-2 rounded hover:bg-gray-200 dark:hover:bg-slate-800 text-gray-700 dark:text-gray-300"><UnderlineIcon /></button>
+                <button type="button" onClick={() => handleToolbar('insertUnorderedList')} className="p-2 rounded hover:bg-gray-200 dark:hover:bg-slate-800 text-gray-700 dark:text-gray-300"><ListIcon /></button>
+                <button type="button" onClick={handleEmoji} className="p-2 rounded hover:bg-gray-200 dark:hover:bg-slate-800 text-gray-700 dark:text-gray-300"><EmojiIcon /></button>
               </div>
               <div
                 ref={editDescRef}
                 contentEditable
-                className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 min-h-[120px] outline-none text-gray-900 dark:text-white text-sm"
+                className="w-full min-h-[150px] p-4 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 rounded-lg outline-none text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 overflow-y-auto"
                 style={{ whiteSpace: 'pre-wrap' }}
               />
               <div className="flex gap-2 justify-end mt-4">
-                <button onClick={() => setEditing(false)} className="px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-300">Cancel</button>
-                <button onClick={handleSaveEdit} className="btn-gradient">Save Changes</button>
+                <button onClick={() => setEditing(false)} className="px-4 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700">Cancel</button>
+                <button onClick={handleSaveEdit} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium shadow-sm">Save Changes</button>
               </div>
             </div>
           )}
 
-          {/* Description (view mode) */}
+          {/* Group Description Area (View Mode) */}
           {!editing && group.description && (
-            <div className="mt-5 pt-4 border-t border-gray-100 dark:border-gray-800">
-              <div className={`prose dark:prose-invert max-w-none text-gray-800 dark:text-gray-100 text-sm leading-relaxed break-words ${!showFullDescription ? 'line-clamp-4' : ''}`}>
-                <div dangerouslySetInnerHTML={{ __html: group.description }} />
-              </div>
-              {group.description.replace(/<[^>]*>/g, '').length > 150 && (
-                <div className="flex justify-end mt-2">
-                  <button
-                    onClick={() => setShowFullDescription(!showFullDescription)}
-                    className="text-primary-600 dark:text-primary-400 text-sm font-medium hover:underline"
-                  >
-                    {showFullDescription ? 'Show Less' : 'More'}
-                  </button>
+            <div className="mt-4 pt-4 border-t border-gray-100 dark:border-slate-700 w-full">
+              <div className="relative flex flex-col">
+                
+                {/* Description Container */}
+                <div 
+                    className={`
+                        prose max-w-none text-sm break-words w-full
+                        text-gray-800 dark:text-gray-200 
+                        prose-a:text-blue-600 dark:prose-a:text-blue-400
+                        prose-strong:text-gray-900 dark:prose-strong:text-white
+                        ${!showFullDescription ? 'line-clamp-4' : ''}
+                    `} 
+                >
+                   <div dangerouslySetInnerHTML={{ __html: group.description }} />
                 </div>
-              )}
+
+                {/* Read More Button Container - Flex aligned to right */}
+                {group.description.replace(/<[^>]*>/g, '').length > 150 && (
+                  <div className="flex justify-end mt-2 w-full">
+                      <button
+                          onClick={() => setShowFullDescription(!showFullDescription)}
+                          className="px-3 py-1 bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-blue-600 dark:text-blue-400 text-xs font-semibold rounded-md transition-colors"
+                      >
+                          {showFullDescription ? 'Show Less' : 'Read More...'}
+                      </button>
+                  </div>
+                )}
+              </div>
             </div>
           )}
-        </div>
-      </div>
 
-      {/* Posts Feed */}
-      {posts.length === 0 && <p className="text-center text-gray-500 dark:text-gray-400 py-12">No posts yet. Be the first to share!</p>}
-      <div className="space-y-5">
-        {posts.map(post => {
-          const renderWithMentions = (text) => {
-            if (!text) return "";
-            return text.replace(/@([a-zA-Z0-9_.]+)/g, '<span class="text-primary-600 font-medium">@$1</span>');
-          };
-          return (
-            <div key={post.id} className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 p-5 transition-colors">
-              <div className="flex justify-between items-start flex-wrap gap-2 mb-3">
-                <div>
-                  <span className="font-semibold text-gray-900 dark:text-white">{post.authorName}</span>
-                  <span className="text-xs text-gray-400 ml-2">{new Date(post.createdAt?.toDate()).toLocaleString()}</span>
-                </div>
-                <div className="flex gap-2">
-                  <button onClick={() => {
-                    if (navigator.share) {
-                      navigator.share({ title: 'Check this post', url: `${window.location.origin}/community/groups/${groupId}?post=${post.id}` }).catch(() => {});
-                    } else {
-                      navigator.clipboard.writeText(`${window.location.origin}/community/groups/${groupId}?post=${post.id}`);
-                      toast.success("Post link copied!");
-                    }
-                  }} className="text-gray-400 hover:text-primary-600"><ShareIcon /></button>
-                  {user && (user.uid === post.authorId || user.isAdmin) && (
-                    <button onClick={async () => {
-                      if (confirm("Delete post?")) {
-                        await updateDoc(doc(db, "posts", post.id), { isDeleted: true });
-                        setPosts(posts.filter(p => p.id !== post.id));
-                        toast.success("Post deleted");
+        </div>
+
+        {posts.length === 0 && <p className="text-center text-gray-500 py-12">No posts yet. Be the first to share!</p>}
+        <div className="space-y-4 w-full">
+          {posts.map(post => {
+            const renderWithMentions = (text) => {
+              if (!text) return "";
+              return text.replace(/@([a-zA-Z0-9_.]+)/g, '<span class="text-blue-600 dark:text-blue-400 font-medium">@$1</span>');
+            };
+            return (
+              <div key={post.id} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-4 w-full overflow-hidden">
+                <div className="flex justify-between items-start mb-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                    <span className="font-medium text-gray-900 dark:text-white truncate max-w-[200px] sm:max-w-xs">{post.authorName}</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">{new Date(post.createdAt?.toDate()).toLocaleString()}</span>
+                  </div>
+                  <div className="flex gap-2 flex-shrink-0 ml-2">
+                    <button onClick={() => {
+                      if (navigator.share) {
+                        navigator.share({ title: 'Check this post', url: `${window.location.origin}/community/groups/${groupId}?post=${post.id}` }).catch(() => {});
+                      } else {
+                        navigator.clipboard.writeText(`${window.location.origin}/community/groups/${groupId}?post=${post.id}`);
+                        toast.success("Post link copied!");
                       }
-                    }} className="text-gray-400 hover:text-red-500"><TrashIcon /></button>
-                  )}
+                    }} className="text-gray-400 hover:text-blue-600 p-1"><ShareIcon /></button>
+                    {user && (user.uid === post.authorId || user.isAdmin) && (
+                      <button onClick={async () => {
+                        if (confirm("Delete post?")) {
+                          await updateDoc(doc(db, "posts", post.id), { isDeleted: true });
+                          setPosts(posts.filter(p => p.id !== post.id));
+                          toast.success("Post deleted");
+                        }
+                      }} className="text-gray-400 hover:text-red-500 p-1"><TrashIcon /></button>
+                    )}
+                  </div>
                 </div>
+                <div className="prose max-w-none text-sm text-gray-800 dark:text-gray-200 break-words w-full" dangerouslySetInnerHTML={{ __html: renderWithMentions(post.text) }} />
+                {post.imageUrl && (
+                    <div className="mt-3 rounded-xl overflow-hidden bg-gray-100 dark:bg-slate-900 flex justify-center">
+                       <img src={post.imageUrl} alt="Post attachment" className="max-h-96 object-contain w-full h-auto" loading="lazy" />
+                    </div>
+                )}
+                {post.videoId && <YouTubeEmbed videoId={post.videoId} />}
               </div>
-              <div className="prose dark:prose-invert max-w-none text-gray-800 dark:text-gray-100 text-sm break-words" dangerouslySetInnerHTML={{ __html: renderWithMentions(post.text) }} />
-              {post.imageUrl && <img src={post.imageUrl} alt="Post attachment" className="mt-3 rounded-xl max-h-96 object-contain w-full" />}
-              {post.videoId && <YouTubeEmbed videoId={post.videoId} />}
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </div>
   );
