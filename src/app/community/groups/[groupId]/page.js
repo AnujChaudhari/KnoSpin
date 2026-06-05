@@ -68,11 +68,9 @@ const EmojiIcon = () => (
     <circle cx="12" cy="12" r="10" /><path d="M8 14s1.5 2 4 2 4-2 4-2" /><line x1="9" y1="9" x2="9.01" y2="9" /><line x1="15" y1="9" x2="15.01" y2="9" />
   </svg>
 );
-const ThreeDotsIcon = () => (
+const MoreIcon = () => (
   <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-    <circle cx="12" cy="12" r="1" fill="currentColor" />
-    <circle cx="12" cy="5" r="1" fill="currentColor" />
-    <circle cx="12" cy="19" r="1" fill="currentColor" />
+    <circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /><circle cx="5" cy="12" r="1" />
   </svg>
 );
 const YouTubeEmbed = ({ videoId }) => (
@@ -96,9 +94,20 @@ export default function GroupDetailPage() {
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState("");
-  const [showMenu, setShowMenu] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef(null);
   const editDescRef = useRef(null);
-  const menuRef = useRef(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   useEffect(() => {
     if (!groupId) return;
@@ -129,17 +138,6 @@ export default function GroupDetailPage() {
     fetchData();
   }, [groupId, user]);
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (menuRef.current && !menuRef.current.contains(event.target)) {
-        setShowMenu(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
   const handleJoin = async () => {
     if (!user) { toast.error("Please login"); return; }
     try {
@@ -166,7 +164,7 @@ export default function GroupDetailPage() {
   const handleStartEdit = () => {
     setEditName(group.name);
     setEditing(true);
-    setShowMenu(false);
+    setShowDropdown(false);
     setTimeout(() => {
       if (editDescRef.current) {
         editDescRef.current.innerHTML = group.description || "";
@@ -192,8 +190,8 @@ export default function GroupDetailPage() {
   };
 
   const handleDeleteGroup = () => {
+    setShowDropdown(false);
     if (!canDelete) return toast.error("You are not authorized to delete this group");
-    setShowMenu(false);
     const confirmInput = prompt(`To delete this group, enter the creator's User ID:\n(${group.createdBy})`);
     if (confirmInput === group.createdBy) {
       if (confirm("Are you absolutely sure? This action cannot be undone.")) {
@@ -235,155 +233,161 @@ export default function GroupDetailPage() {
   if (!group) return null;
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8">
-      {/* Group Header */}
-      <div className="card mb-6 overflow-hidden">
-        {/* First row: group icon, group name, and action buttons */}
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-12 h-12 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 flex-shrink-0 overflow-hidden">
+    <div className="max-w-4xl mx-auto px-4 py-8">
+      {/* Group Header Card */}
+      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-800 mb-6 overflow-hidden transition-colors duration-200">
+        <div className="p-5 md:p-6">
+          {/* Top row: Icon + Name + Action Buttons */}
+          <div className="flex flex-wrap items-start gap-4">
+            <div className="w-14 h-14 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 flex-shrink-0 overflow-hidden">
               {group.iconUrl ? (
                 <img src={group.iconUrl} alt={group.name} className="w-full h-full object-cover" />
               ) : (
                 <GroupIcon />
               )}
             </div>
-            {!editing ? (
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white break-words">
-                {group.name}
-              </h1>
-            ) : null}
-          </div>
 
-          {/* Action buttons (right side) */}
-          <div className="flex items-center gap-2 flex-shrink-0">
-            {!isMember ? (
-              <button onClick={handleJoin} className="btn-gradient text-sm px-3 py-1.5">Join</button>
-            ) : (
-              <>
-                <button onClick={() => setShowInvite(!showInvite)} className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition" title="Invite">
-                  <ShareIcon />
-                </button>
-                <Link href={`/community/groups/${groupId}/post/create`} className="btn-gradient text-sm flex items-center gap-1 px-3 py-1.5">
-                  <PlusIcon /> <span className="hidden sm:inline">Post</span>
-                </Link>
-              </>
-            )}
-            {/* Three-dot menu for edit/delete */}
-            {(canEdit || canDelete) && !editing && (
-              <div className="relative" ref={menuRef}>
-                <button
-                  onClick={() => setShowMenu(!showMenu)}
-                  className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition"
-                  title="More options"
-                >
-                  <ThreeDotsIcon />
-                </button>
-                {showMenu && (
-                  <div className="absolute right-0 mt-2 w-40 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-10 overflow-hidden">
-                    {canEdit && (
+            <div className="flex-1 min-w-0">
+              {editing ? (
+                <div className="space-y-3">
+                  <input
+                    value={editName}
+                    onChange={e => setEditName(e.target.value)}
+                    className="input-field text-2xl font-bold w-full"
+                    placeholder="Group Name"
+                  />
+                  <div className="flex gap-1 mb-2 flex-wrap">
+                    <button type="button" onClick={() => handleToolbar('bold')} className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800"><BoldIcon /></button>
+                    <button type="button" onClick={() => handleToolbar('italic')} className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800"><ItalicIcon /></button>
+                    <button type="button" onClick={() => handleToolbar('underline')} className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800"><UnderlineIcon /></button>
+                    <button type="button" onClick={() => handleToolbar('insertUnorderedList')} className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800"><ListIcon /></button>
+                    <button type="button" onClick={handleEmoji} className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800"><EmojiIcon /></button>
+                  </div>
+                  <div
+                    ref={editDescRef}
+                    contentEditable
+                    className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 min-h-[120px] outline-none text-gray-900 dark:text-white text-sm"
+                    style={{ whiteSpace: 'pre-wrap' }}
+                  />
+                  <div className="flex gap-2 justify-end flex-wrap">
+                    <button onClick={() => setEditing(false)} className="px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-300">Cancel</button>
+                    <button onClick={handleSaveEdit} className="btn-gradient">Save Changes</button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {/* Group Name - stays on one line */}
+                  <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white truncate">{group.name}</h1>
+
+                  {/* Description with inline "More" button on the right */}
+                  <div className="mt-3 flex items-start justify-between gap-3">
+                    <div className="flex-1 prose dark:prose-invert max-w-none text-gray-800 dark:text-gray-100 text-sm leading-relaxed break-words">
+                      {showFullDescription ? (
+                        <div dangerouslySetInnerHTML={{ __html: group.description || '' }} />
+                      ) : (
+                        <div className="line-clamp-3" dangerouslySetInnerHTML={{ __html: group.description || '' }} />
+                      )}
+                    </div>
+                    {group.description && group.description.replace(/<[^>]*>/g, '').length > 150 && (
                       <button
-                        onClick={handleStartEdit}
-                        className="flex items-center gap-2 w-full px-4 py-2 text-left text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                        onClick={() => setShowFullDescription(!showFullDescription)}
+                        className="text-primary-600 dark:text-primary-400 text-sm font-medium whitespace-nowrap hover:underline mt-0.5"
                       >
-                        <PencilIcon /> Edit Group
-                      </button>
-                    )}
-                    {canDelete && (
-                      <button
-                        onClick={handleDeleteGroup}
-                        className="flex items-center gap-2 w-full px-4 py-2 text-left text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
-                      >
-                        <TrashIcon /> Delete Group
+                        {showFullDescription ? 'Less' : 'More'}
                       </button>
                     )}
                   </div>
+
+                  <div className="flex flex-wrap items-center gap-4 mt-3 text-sm text-gray-500 dark:text-gray-400">
+                    <span className="flex items-center gap-1"><MembersIcon /> {memberCount} members</span>
+                    <span>{group.privacy === 'private' ? 'Private' : 'Public'}</span>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Right side action buttons (non-editing mode) */}
+            {!editing && (
+              <div className="flex items-center gap-1 flex-shrink-0">
+                {!isMember ? (
+                  <button onClick={handleJoin} className="btn-gradient text-sm px-4 py-2">Join</button>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => setShowInvite(!showInvite)}
+                      className="p-2 bg-gray-100 dark:bg-gray-800 rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+                      title="Invite"
+                    >
+                      <ShareIcon />
+                    </button>
+                    <Link
+                      href={`/community/groups/${groupId}/post/create`}
+                      className="bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium flex items-center gap-1 px-3 py-2 rounded-lg transition"
+                    >
+                      <PlusIcon /> <span className="hidden sm:inline">Post</span>
+                    </Link>
+                    {(canEdit || canDelete) && (
+                      <div className="relative" ref={dropdownRef}>
+                        <button
+                          onClick={() => setShowDropdown(!showDropdown)}
+                          className="p-2 bg-gray-100 dark:bg-gray-800 rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+                          title="More options"
+                        >
+                          <MoreIcon />
+                        </button>
+                        {showDropdown && (
+                          <div className="absolute right-0 mt-2 w-40 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 z-10 py-1">
+                            {canEdit && (
+                              <button
+                                onClick={handleStartEdit}
+                                className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                              >
+                                <PencilIcon /> Edit Group
+                              </button>
+                            )}
+                            {canDelete && (
+                              <button
+                                onClick={handleDeleteGroup}
+                                className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition"
+                              >
+                                <TrashIcon /> Delete Group
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             )}
           </div>
+
+          {/* Invite link section - appears below when toggled */}
+          {showInvite && !editing && (
+            <div className="mt-5 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+              <code className="text-xs sm:text-sm break-all text-gray-700 dark:text-gray-300">{`https://quickshoppro.vercel.app/community/groups/join?invite=${group.inviteCode}`}</code>
+              <button onClick={copyInviteLink} className="btn-gradient text-xs px-3 py-1.5 flex items-center gap-1 flex-shrink-0">
+                <CopyIcon /> Copy
+              </button>
+            </div>
+          )}
         </div>
-
-        {/* Edit mode UI (full width) */}
-        {editing && (
-          <div className="mt-4 space-y-3">
-            <input
-              value={editName}
-              onChange={e => setEditName(e.target.value)}
-              className="input-field text-2xl font-bold w-full"
-              placeholder="Group Name"
-            />
-            <div className="flex gap-1 mb-2 flex-wrap">
-              <button type="button" onClick={() => handleToolbar('bold')} className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700"><BoldIcon /></button>
-              <button type="button" onClick={() => handleToolbar('italic')} className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700"><ItalicIcon /></button>
-              <button type="button" onClick={() => handleToolbar('underline')} className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700"><UnderlineIcon /></button>
-              <button type="button" onClick={() => handleToolbar('insertUnorderedList')} className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700"><ListIcon /></button>
-              <button type="button" onClick={handleEmoji} className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700"><EmojiIcon /></button>
-            </div>
-            <div
-              ref={editDescRef}
-              contentEditable
-              className="card min-h-[120px] p-4 outline-none text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800"
-              style={{ whiteSpace: 'pre-wrap' }}
-            />
-            <div className="flex gap-2 justify-end flex-wrap">
-              <button onClick={() => setEditing(false)} className="px-4 py-2 border rounded-lg">Cancel</button>
-              <button onClick={handleSaveEdit} className="btn-gradient">Save Changes</button>
-            </div>
-          </div>
-        )}
-
-        {/* Description area - big & mobile friendly, with "more" button on the right */}
-        {!editing && (
-          <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
-            <div className="prose prose-sm sm:prose dark:prose-invert max-w-none text-gray-700 dark:text-gray-300">
-              {showFullDescription ? (
-                <div dangerouslySetInnerHTML={{ __html: group.description || '' }} />
-              ) : (
-                <div className="line-clamp-3" dangerouslySetInnerHTML={{ __html: group.description || '' }} />
-              )}
-            </div>
-            {group.description && group.description.replace(/<[^>]*>/g, '').length > 100 && (
-              <div className="flex justify-end mt-2">
-                <button
-                  onClick={() => setShowFullDescription(!showFullDescription)}
-                  className="text-primary-600 dark:text-primary-400 text-sm font-medium hover:underline"
-                >
-                  {showFullDescription ? 'Less' : 'More'}
-                </button>
-              </div>
-            )}
-            <div className="flex flex-wrap items-center gap-4 mt-3 text-sm text-gray-500 dark:text-gray-400 border-t pt-3 border-gray-200 dark:border-gray-700">
-              <span className="flex items-center gap-1"><MembersIcon /> {memberCount} members</span>
-              <span>{group.privacy === 'private' ? 'Private' : 'Public'}</span>
-            </div>
-          </div>
-        )}
-
-        {/* Invite section - already responsive */}
-        {showInvite && !editing && (
-          <div className="mt-4 p-3 bg-gray-100 dark:bg-gray-700 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-            <code className="text-xs sm:text-sm break-all">{`https://quickshoppro.vercel.app/community/groups/join?invite=${group.inviteCode}`}</code>
-            <button onClick={copyInviteLink} className="btn-gradient text-xs px-3 py-1.5 flex items-center gap-1 flex-shrink-0">
-              <CopyIcon /> Copy
-            </button>
-          </div>
-        )}
       </div>
 
       {/* Post Feed */}
       {posts.length === 0 && <p className="text-center text-gray-500 dark:text-gray-400 py-12">No posts yet. Be the first to share!</p>}
-      <div className="space-y-4">
+      <div className="space-y-5">
         {posts.map(post => {
           const renderWithMentions = (text) => {
             if (!text) return "";
             return text.replace(/@([a-zA-Z0-9_.]+)/g, '<span class="text-primary-600 font-medium">@$1</span>');
           };
           return (
-            <div key={post.id} className="card">
-              <div className="flex justify-between items-start mb-3 flex-wrap gap-2">
+            <div key={post.id} className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 p-5 transition-colors">
+              <div className="flex justify-between items-start flex-wrap gap-2 mb-3">
                 <div>
-                  <span className="font-medium dark:text-white">{post.authorName}</span>
+                  <span className="font-semibold text-gray-900 dark:text-white">{post.authorName}</span>
                   <span className="text-xs text-gray-400 ml-2">{new Date(post.createdAt?.toDate()).toLocaleString()}</span>
                 </div>
                 <div className="flex gap-2">
@@ -406,7 +410,7 @@ export default function GroupDetailPage() {
                   )}
                 </div>
               </div>
-              <div className="prose dark:prose-invert max-w-none text-sm dark:text-gray-200 break-words" dangerouslySetInnerHTML={{ __html: renderWithMentions(post.text) }} />
+              <div className="prose dark:prose-invert max-w-none text-gray-800 dark:text-gray-100 text-sm break-words" dangerouslySetInnerHTML={{ __html: renderWithMentions(post.text) }} />
               {post.imageUrl && <img src={post.imageUrl} alt="Post attachment" className="mt-3 rounded-xl max-h-96 object-contain w-full" />}
               {post.videoId && <YouTubeEmbed videoId={post.videoId} />}
             </div>
