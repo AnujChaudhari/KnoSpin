@@ -43,11 +43,6 @@ const PencilIcon = () => (
     <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
   </svg>
 );
-const MoreVerticalIcon = () => (
-  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-    <circle cx="12" cy="12" r="1" /><circle cx="12" cy="5" r="1" /><circle cx="12" cy="19" r="1" />
-  </svg>
-);
 const BoldIcon = () => (
   <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
     <path d="M6 4h8a4 4 0 014 4 4 4 0 01-4 4H6z" /><path d="M6 12h9a4 4 0 014 4 4 4 0 01-4 4H6z" />
@@ -73,6 +68,13 @@ const EmojiIcon = () => (
     <circle cx="12" cy="12" r="10" /><path d="M8 14s1.5 2 4 2 4-2 4-2" /><line x1="9" y1="9" x2="9.01" y2="9" /><line x1="15" y1="9" x2="15.01" y2="9" />
   </svg>
 );
+const ThreeDotsIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="1" fill="currentColor" />
+    <circle cx="12" cy="5" r="1" fill="currentColor" />
+    <circle cx="12" cy="19" r="1" fill="currentColor" />
+  </svg>
+);
 const YouTubeEmbed = ({ videoId }) => (
   <div className="aspect-video rounded-xl overflow-hidden shadow bg-black mt-3">
     <iframe width="100%" height="100%" src={`https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1`} title="YouTube video" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen className="w-full h-full" />
@@ -94,20 +96,9 @@ export default function GroupDetailPage() {
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState("");
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const dropdownRef = useRef(null);
+  const [showMenu, setShowMenu] = useState(false);
   const editDescRef = useRef(null);
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setDropdownOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  const menuRef = useRef(null);
 
   useEffect(() => {
     if (!groupId) return;
@@ -138,6 +129,17 @@ export default function GroupDetailPage() {
     fetchData();
   }, [groupId, user]);
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setShowMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const handleJoin = async () => {
     if (!user) { toast.error("Please login"); return; }
     try {
@@ -160,12 +162,11 @@ export default function GroupDetailPage() {
 
   const canEdit = user && (user.uid === group?.createdBy || user.isAdmin);
   const canDelete = user && (user.uid === group?.createdBy || user.isAdmin);
-  const showDropdown = canEdit || canDelete;
 
   const handleStartEdit = () => {
     setEditName(group.name);
     setEditing(true);
-    setDropdownOpen(false);
+    setShowMenu(false);
     setTimeout(() => {
       if (editDescRef.current) {
         editDescRef.current.innerHTML = group.description || "";
@@ -191,8 +192,8 @@ export default function GroupDetailPage() {
   };
 
   const handleDeleteGroup = () => {
-    setDropdownOpen(false);
     if (!canDelete) return toast.error("You are not authorized to delete this group");
+    setShowMenu(false);
     const confirmInput = prompt(`To delete this group, enter the creator's User ID:\n(${group.createdBy})`);
     if (confirmInput === group.createdBy) {
       if (confirm("Are you absolutely sure? This action cannot be undone.")) {
@@ -235,109 +236,55 @@ export default function GroupDetailPage() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
-      {/* Group Header - Professional & Responsive */}
+      {/* Group Header */}
       <div className="card mb-6 overflow-hidden">
-        <div className="flex flex-wrap items-start gap-4">
-          {/* Group Icon */}
-          <div className="w-14 h-14 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 flex-shrink-0 overflow-hidden">
-            {group.iconUrl ? (
-              <img src={group.iconUrl} alt={group.name} className="w-full h-full object-cover" />
-            ) : (
-              <GroupIcon />
-            )}
+        {/* First row: group icon, group name, and action buttons */}
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-12 h-12 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 flex-shrink-0 overflow-hidden">
+              {group.iconUrl ? (
+                <img src={group.iconUrl} alt={group.name} className="w-full h-full object-cover" />
+              ) : (
+                <GroupIcon />
+              )}
+            </div>
+            {!editing ? (
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white break-words">
+                {group.name}
+              </h1>
+            ) : null}
           </div>
 
-          {/* Group Info - Takes remaining space */}
-          <div className="flex-1 min-w-0">
-            {editing ? (
-              <div className="space-y-3">
-                <input
-                  value={editName}
-                  onChange={e => setEditName(e.target.value)}
-                  className="input-field text-2xl font-bold w-full"
-                  placeholder="Group Name"
-                />
-                <div className="flex gap-1 mb-2 flex-wrap">
-                  <button type="button" onClick={() => handleToolbar('bold')} className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700"><BoldIcon /></button>
-                  <button type="button" onClick={() => handleToolbar('italic')} className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700"><ItalicIcon /></button>
-                  <button type="button" onClick={() => handleToolbar('underline')} className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700"><UnderlineIcon /></button>
-                  <button type="button" onClick={() => handleToolbar('insertUnorderedList')} className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700"><ListIcon /></button>
-                  <button type="button" onClick={handleEmoji} className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700"><EmojiIcon /></button>
-                </div>
-                <div
-                  ref={editDescRef}
-                  contentEditable
-                  className="card min-h-[100px] p-4 outline-none text-sm break-words"
-                  style={{ whiteSpace: 'pre-wrap' }}
-                />
-                <div className="flex gap-2 justify-end flex-wrap">
-                  <button onClick={() => setEditing(false)} className="px-4 py-2 border rounded-lg">Cancel</button>
-                  <button onClick={handleSaveEdit} className="btn-gradient">Save Changes</button>
-                </div>
-              </div>
+          {/* Action buttons (right side) */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {!isMember ? (
+              <button onClick={handleJoin} className="btn-gradient text-sm px-3 py-1.5">Join</button>
             ) : (
               <>
-                {/* Group name - first line, never wraps awkwardly */}
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white break-words">{group.name}</h1>
-                
-                {/* Description with right-aligned "More" button */}
-                <div className="mt-2 flex flex-wrap items-baseline justify-between gap-2">
-                  <div className="prose dark:prose-invert max-w-none text-sm text-black dark:text-white break-words flex-1">
-                    {showFullDescription ? (
-                      <div dangerouslySetInnerHTML={{ __html: group.description || '' }} />
-                    ) : (
-                      <div className="line-clamp-3" dangerouslySetInnerHTML={{ __html: group.description || '' }} />
-                    )}
-                  </div>
-                  {group.description && group.description.replace(/<[^>]*>/g, '').length > 150 && (
-                    <button
-                      onClick={() => setShowFullDescription(!showFullDescription)}
-                      className="text-primary-600 dark:text-primary-400 text-xs font-medium hover:underline whitespace-nowrap"
-                    >
-                      {showFullDescription ? 'Less' : 'More'}
-                    </button>
-                  )}
-                </div>
-
-                {/* Metadata row */}
-                <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-gray-500 dark:text-gray-400">
-                  <span className="flex items-center gap-1"><MembersIcon /> {memberCount} members</span>
-                  <span>{group.privacy === 'private' ? 'Private' : 'Public'}</span>
-                </div>
+                <button onClick={() => setShowInvite(!showInvite)} className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition" title="Invite">
+                  <ShareIcon />
+                </button>
+                <Link href={`/community/groups/${groupId}/post/create`} className="btn-gradient text-sm flex items-center gap-1 px-3 py-1.5">
+                  <PlusIcon /> <span className="hidden sm:inline">Post</span>
+                </Link>
               </>
             )}
-          </div>
-
-          {/* Action Buttons: Share, Add Post, and 3-dot dropdown (Edit/Delete) */}
-          <div className="flex items-center gap-1 flex-shrink-0">
-            {isMember && (
-              <button onClick={() => setShowInvite(!showInvite)} className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition" title="Invite">
-                <ShareIcon />
-              </button>
-            )}
-            {isMember && (
-              <Link href={`/community/groups/${groupId}/post/create`} className="btn-gradient text-sm flex items-center gap-1 px-3 py-1.5">
-                <PlusIcon /> <span className="hidden sm:inline">Post</span>
-              </Link>
-            )}
-            {!isMember && (
-              <button onClick={handleJoin} className="btn-gradient text-sm px-3 py-1.5">Join</button>
-            )}
-            {showDropdown && !editing && (
-              <div className="relative" ref={dropdownRef}>
+            {/* Three-dot menu for edit/delete */}
+            {(canEdit || canDelete) && !editing && (
+              <div className="relative" ref={menuRef}>
                 <button
-                  onClick={() => setDropdownOpen(!dropdownOpen)}
+                  onClick={() => setShowMenu(!showMenu)}
                   className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition"
                   title="More options"
                 >
-                  <MoreVerticalIcon />
+                  <ThreeDotsIcon />
                 </button>
-                {dropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-44 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-10">
+                {showMenu && (
+                  <div className="absolute right-0 mt-2 w-40 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-10 overflow-hidden">
                     {canEdit && (
                       <button
                         onClick={handleStartEdit}
-                        className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-t-lg"
+                        className="flex items-center gap-2 w-full px-4 py-2 text-left text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
                       >
                         <PencilIcon /> Edit Group
                       </button>
@@ -345,7 +292,7 @@ export default function GroupDetailPage() {
                     {canDelete && (
                       <button
                         onClick={handleDeleteGroup}
-                        className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-b-lg"
+                        className="flex items-center gap-2 w-full px-4 py-2 text-left text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
                       >
                         <TrashIcon /> Delete Group
                       </button>
@@ -357,9 +304,65 @@ export default function GroupDetailPage() {
           </div>
         </div>
 
-        {/* Invite link section - responsive */}
-        {showInvite && (
-          <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+        {/* Edit mode UI (full width) */}
+        {editing && (
+          <div className="mt-4 space-y-3">
+            <input
+              value={editName}
+              onChange={e => setEditName(e.target.value)}
+              className="input-field text-2xl font-bold w-full"
+              placeholder="Group Name"
+            />
+            <div className="flex gap-1 mb-2 flex-wrap">
+              <button type="button" onClick={() => handleToolbar('bold')} className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700"><BoldIcon /></button>
+              <button type="button" onClick={() => handleToolbar('italic')} className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700"><ItalicIcon /></button>
+              <button type="button" onClick={() => handleToolbar('underline')} className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700"><UnderlineIcon /></button>
+              <button type="button" onClick={() => handleToolbar('insertUnorderedList')} className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700"><ListIcon /></button>
+              <button type="button" onClick={handleEmoji} className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700"><EmojiIcon /></button>
+            </div>
+            <div
+              ref={editDescRef}
+              contentEditable
+              className="card min-h-[120px] p-4 outline-none text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800"
+              style={{ whiteSpace: 'pre-wrap' }}
+            />
+            <div className="flex gap-2 justify-end flex-wrap">
+              <button onClick={() => setEditing(false)} className="px-4 py-2 border rounded-lg">Cancel</button>
+              <button onClick={handleSaveEdit} className="btn-gradient">Save Changes</button>
+            </div>
+          </div>
+        )}
+
+        {/* Description area - big & mobile friendly, with "more" button on the right */}
+        {!editing && (
+          <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+            <div className="prose prose-sm sm:prose dark:prose-invert max-w-none text-gray-700 dark:text-gray-300">
+              {showFullDescription ? (
+                <div dangerouslySetInnerHTML={{ __html: group.description || '' }} />
+              ) : (
+                <div className="line-clamp-3" dangerouslySetInnerHTML={{ __html: group.description || '' }} />
+              )}
+            </div>
+            {group.description && group.description.replace(/<[^>]*>/g, '').length > 100 && (
+              <div className="flex justify-end mt-2">
+                <button
+                  onClick={() => setShowFullDescription(!showFullDescription)}
+                  className="text-primary-600 dark:text-primary-400 text-sm font-medium hover:underline"
+                >
+                  {showFullDescription ? 'Less' : 'More'}
+                </button>
+              </div>
+            )}
+            <div className="flex flex-wrap items-center gap-4 mt-3 text-sm text-gray-500 dark:text-gray-400 border-t pt-3 border-gray-200 dark:border-gray-700">
+              <span className="flex items-center gap-1"><MembersIcon /> {memberCount} members</span>
+              <span>{group.privacy === 'private' ? 'Private' : 'Public'}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Invite section - already responsive */}
+        {showInvite && !editing && (
+          <div className="mt-4 p-3 bg-gray-100 dark:bg-gray-700 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
             <code className="text-xs sm:text-sm break-all">{`https://quickshoppro.vercel.app/community/groups/join?invite=${group.inviteCode}`}</code>
             <button onClick={copyInviteLink} className="btn-gradient text-xs px-3 py-1.5 flex items-center gap-1 flex-shrink-0">
               <CopyIcon /> Copy
@@ -369,7 +372,7 @@ export default function GroupDetailPage() {
       </div>
 
       {/* Post Feed */}
-      {posts.length === 0 && <p className="text-center text-gray-500 py-12">No posts yet. Be the first to share!</p>}
+      {posts.length === 0 && <p className="text-center text-gray-500 dark:text-gray-400 py-12">No posts yet. Be the first to share!</p>}
       <div className="space-y-4">
         {posts.map(post => {
           const renderWithMentions = (text) => {
