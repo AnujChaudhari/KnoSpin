@@ -27,7 +27,6 @@ const UnderlineIcon = () => <svg className="w-4 h-4" fill="none" stroke="current
 const ListIcon = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><circle cx="4" cy="6" r="1" /><circle cx="4" cy="12" r="1" /><circle cx="4" cy="18" r="1" /></svg>;
 const EmojiIcon = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><path d="M8 14s1.5 2 4 2 4-2 4-2" /><line x1="9" y1="9" x2="9.01" y2="9" /><line x1="15" y1="9" x2="15.01" y2="9" /></svg>;
 const DotsVerticalIcon = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1" /><circle cx="12" cy="5" r="1" /><circle cx="12" cy="19" r="1" /></svg>;
-const PhoneIcon = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.362 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.574 2.81.7A2 2 0 0122 16.92z" /></svg>;
 const VideoIcon = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>;
 
 const YouTubeEmbed = ({ videoId }) => (
@@ -47,7 +46,6 @@ const YouTubeEmbed = ({ videoId }) => (
 
 /* ────────────── kMeet CALL MODAL ────────────── */
 const KMeetModal = ({ groupId, onClose }) => {
-  // kMeet uses standard URL paths. We clean the groupId to make a valid room name
   const roomName = `QuickShop_${groupId.replace(/[^a-zA-Z0-9]/g, "_")}`;
   return (
     <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center sm:p-6 animate-in fade-in duration-200">
@@ -271,7 +269,6 @@ export default function GroupDetailPage() {
       
       {/* ===== PREMIUM GROUP CARD ===== */}
       <div className="bg-white dark:bg-[#111] rounded-3xl shadow-sm border border-gray-100 dark:border-white/5 mb-6 overflow-hidden relative">
-        {/* Subtle top gradient banner */}
         <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-primary-500/10 to-transparent dark:from-primary-500/5 opacity-50 pointer-events-none" />
         
         <div className="p-5 sm:p-7 relative z-10">
@@ -310,7 +307,6 @@ export default function GroupDetailPage() {
               </div>
             </div>
 
-            {/* Menu Options */}
             {!editing && (canEdit || canDelete) && (
               <div className="relative flex-shrink-0" ref={menuRef}>
                 <button
@@ -337,27 +333,35 @@ export default function GroupDetailPage() {
             )}
           </div>
 
-          {/* ===== ONE-LINE ACTION BAR (Mobile Friendly) ===== */}
+          {/* ===== MOBILE-FRIENDLY ACTION BAR (GRID LAYOUT) ===== */}
           {!editing && isMember && (
-            <div className="flex items-center gap-2 mt-6 overflow-x-auto no-scrollbar pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            <div className="grid grid-cols-3 gap-1.5 sm:gap-2 mt-6">
+              {/* Share Button */}
               <button
                 onClick={() => setShowInvite(!showInvite)}
-                className="flex-1 min-w-[100px] flex justify-center items-center gap-2 px-4 py-2.5 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 rounded-xl text-gray-800 dark:text-gray-200 text-sm font-semibold transition-all active:scale-95 whitespace-nowrap"
+                className="flex justify-center items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2 sm:py-2.5 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 rounded-xl text-gray-800 dark:text-gray-200 text-xs sm:text-sm font-semibold transition-all active:scale-95 whitespace-nowrap"
               >
-                <ShareIcon /> Share
+                <ShareIcon />
+                <span>Share</span>
               </button>
+
+              {/* Post Button (Link) */}
               <Link
                 href={`/community/groups/${groupId}/post/create`}
-                className="flex-1 min-w-[100px] flex justify-center items-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 shadow-sm shadow-primary-500/30 rounded-xl text-white text-sm font-semibold transition-all active:scale-95 whitespace-nowrap"
+                className="flex justify-center items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2 sm:py-2.5 bg-primary-600 hover:bg-primary-700 shadow-sm shadow-primary-500/30 rounded-xl text-white text-xs sm:text-sm font-semibold transition-all active:scale-95 whitespace-nowrap"
               >
-                <PlusIcon /> Post
+                <PlusIcon />
+                <span>Post</span>
               </Link>
+
+              {/* Call Button */}
               <button
                 onClick={startCall}
                 disabled={sendingNotification}
-                className="flex-1 min-w-[100px] flex justify-center items-center gap-2 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 shadow-sm shadow-emerald-500/30 rounded-xl text-white text-sm font-semibold transition-all active:scale-95 disabled:opacity-70 whitespace-nowrap"
+                className="flex justify-center items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2 sm:py-2.5 bg-emerald-500 hover:bg-emerald-600 shadow-sm shadow-emerald-500/30 rounded-xl text-white text-xs sm:text-sm font-semibold transition-all active:scale-95 disabled:opacity-70 whitespace-nowrap"
               >
-                <VideoIcon /> {sendingNotification ? "..." : "Call"}
+                <VideoIcon />
+                {sendingNotification ? "..." : "Call"}
               </button>
             </div>
           )}
@@ -368,7 +372,6 @@ export default function GroupDetailPage() {
             </button>
           )}
 
-          {/* Invite Code Reveal */}
           {showInvite && !editing && (
             <div className="mt-4 p-4 bg-gray-50 dark:bg-white/5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 border border-gray-100 dark:border-white/5 animate-in fade-in slide-in-from-top-2">
               <code className="text-sm break-all text-gray-600 dark:text-gray-300 w-full text-center sm:text-left">
@@ -380,7 +383,6 @@ export default function GroupDetailPage() {
             </div>
           )}
 
-          {/* ===== EDIT MODE EDITOR ===== */}
           {editing && (
             <div className="mt-6 animate-in fade-in">
               <div className="flex gap-1.5 mb-3 overflow-x-auto pb-2 [&::-webkit-scrollbar]:hidden">
@@ -415,7 +417,6 @@ export default function GroupDetailPage() {
             </div>
           )}
 
-          {/* ===== DESCRIPTION ===== */}
           {!editing && group.description && (
             <div className="mt-6 pt-5 border-t border-gray-100 dark:border-white/5">
               <div className={`prose prose-sm dark:prose-invert max-w-none text-gray-600 dark:text-gray-300 leading-relaxed break-words [&_*]:dark:!text-gray-200 [&_*]:dark:!bg-transparent ${!showFullDescription ? "line-clamp-3" : ""}`}>
@@ -431,7 +432,6 @@ export default function GroupDetailPage() {
         </div>
       </div>
 
-      {/* ===== POSTS FEED ===== */}
       <div className="space-y-4 sm:space-y-6">
         {posts.length === 0 && (
           <div className="text-center py-12 px-4 bg-white/50 dark:bg-[#111]/50 rounded-3xl border border-dashed border-gray-200 dark:border-white/10">
@@ -502,7 +502,6 @@ export default function GroupDetailPage() {
         })}
       </div>
 
-      {/* Jitsi/KMeet Modal */}
       {showCall && <KMeetModal groupId={groupId} onClose={() => setShowCall(false)} />}
     </div>
   );
