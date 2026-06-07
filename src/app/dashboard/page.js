@@ -58,6 +58,11 @@ const GroupIcon = () => (
     <path d="M16 3.13a4 4 0 010 7.75" />
   </svg>
 );
+const PremiumIcon = () => (
+  <svg className="w-7 h-7" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.56 5.82 22 7 14.14 2 9.27l6.91-1.01L12 2z" />
+  </svg>
+);
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -89,6 +94,12 @@ export default function DashboardPage() {
       </div>
     );
   }
+
+  // Determine subscription tier and expiry
+  const tier = profile?.subscriptionTier || "free";
+  const expiry = profile?.subscriptionExpiry?.toDate?.();
+  const expiryDate = expiry ? expiry.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : null;
+  const isPremium = tier !== "free";
 
   const menuItems = [
     { href: "/dashboard/orders", label: "My Orders", icon: <OrderIcon />, desc: "Track, return & manage orders", color: "from-blue-500 to-cyan-500", bgLight: "bg-blue-50 dark:bg-blue-900/20", textColor: "text-blue-600 dark:text-blue-400" },
@@ -143,6 +154,51 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* ========== SUBSCRIPTION CARD ========== */}
+      <div className="card mb-6 bg-gradient-to-br from-primary-50 to-purple-50 dark:from-primary-900/20 dark:to-purple-900/20 border border-primary-200 dark:border-primary-800">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600">
+              <PremiumIcon />
+            </div>
+            <div>
+              <h3 className="font-bold text-lg">
+                {tier === "free" ? "Free Plan" : tier === "premium_lite" ? "Premium Lite" : "Premium Pro"}
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                {tier === "free" ? "You are on the free plan." : `Active until ${expiryDate || "N/A"}`}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            {tier !== "premium_pro" && (
+              <Link href="/pricing" className="btn-gradient text-sm px-4 py-2">
+                {tier === "free" ? "Upgrade" : "Upgrade Plan"}
+              </Link>
+            )}
+            <Link href="/pricing" className="text-sm text-primary-600 hover:underline">View Plans</Link>
+          </div>
+        </div>
+        {/* Premium feature highlights if needed */}
+        {isPremium && (
+          <div className="mt-3 flex flex-wrap gap-2 text-xs">
+            {tier === "premium_lite" && (
+              <>
+                <span className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2 py-0.5 rounded-full">Notes & Assignments</span>
+                <span className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2 py-0.5 rounded-full">Selected Courses</span>
+              </>
+            )}
+            {tier === "premium_pro" && (
+              <>
+                <span className="bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded-full">All Courses</span>
+                <span className="bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded-full">15+ PD Subjects</span>
+                <span className="bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded-full">Priority Support</span>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Menu Items */}
