@@ -56,6 +56,14 @@ const SaleIcon = () => (
   </svg>
 );
 
+const CoinIcon = () => (
+  <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
+    <ellipse cx="12" cy="5" rx="9" ry="3" />
+    <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
+    <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+  </svg>
+);
+
 export default function ProductCard({ product }) {
   const { addToCart } = useCart();
   const [wishlist, setWishlist] = useState(false);
@@ -109,6 +117,14 @@ export default function ProductCard({ product }) {
               Digital
             </span>
           )}
+
+          {/* Coin Price Badge (डिजिटल प्रोडक्ट के लिए, अगर coinPrice सेट है) */}
+          {product.coinPrice > 0 && (
+            <span className={`absolute bottom-2 left-2 bg-yellow-500 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1`}>
+              <CoinIcon />
+              {product.coinPrice} coins
+            </span>
+          )}
         </div>
 
         <h3 className="font-semibold text-sm line-clamp-1">{product.name}</h3>
@@ -118,7 +134,7 @@ export default function ProductCard({ product }) {
           <p className="text-xs text-gray-400 mt-0.5">{product.productCode}</p>
         )}
 
-        <div className="flex items-center gap-2 mt-1">
+        <div className="flex items-center gap-2 mt-1 flex-wrap">
           <span className="text-lg font-bold text-primary-600">₹{product.price}</span>
           {product.originalPrice > product.price && (
             <span className="text-xs line-through text-gray-400">₹{product.originalPrice}</span>
@@ -126,6 +142,13 @@ export default function ProductCard({ product }) {
           {product.discountPercentage > 0 && (
             <span className="text-xs text-green-600 bg-green-100 dark:bg-green-900/30 px-1.5 py-0.5 rounded-full">
               -{product.discountPercentage}%
+            </span>
+          )}
+          {/* Coin price text (if not already shown as badge) – छोटा इंडिकेटर */}
+          {product.coinPrice > 0 && (
+            <span className="text-xs text-yellow-600 bg-yellow-100 dark:bg-yellow-900/30 px-1.5 py-0.5 rounded-full flex items-center gap-1">
+              <CoinIcon />
+              {product.coinPrice} coins
             </span>
           )}
         </div>
