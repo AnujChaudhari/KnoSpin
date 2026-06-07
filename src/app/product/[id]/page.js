@@ -12,7 +12,7 @@ import ImageSlider from "@/components/ImageSlider";
 import ReviewSection from "@/components/ReviewSection";
 import RelatedProducts from "@/components/RelatedProducts";
 
-// ---------- Type Icons ----------
+/* ---------- Type Icons ---------- */
 const EarthIcon = () => (
   <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <circle cx="12" cy="12" r="10" />
@@ -20,14 +20,13 @@ const EarthIcon = () => (
     <path d="M2 12h20" />
   </svg>
 );
-
 const BagIcon = () => (
   <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
   </svg>
 );
 
-// ---------- Other SVG stickers ----------
+/* ---------- Digital stickers ---------- */
 const DigitalStickers = {
   pdf: (
     <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2">
@@ -38,7 +37,6 @@ const DigitalStickers = {
       <polyline points="10 9 9 9 8 9" />
     </svg>
   ),
-  // ... other stickers omitted for brevity (same as original)
   digital: (
     <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
@@ -51,6 +49,13 @@ const DigitalStickers = {
       <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
       <polyline points="7 10 12 15 17 10" />
       <line x1="12" y1="15" x2="12" y2="3" />
+    </svg>
+  ),
+  coin: (
+    <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2">
+      <ellipse cx="12" cy="5" rx="9" ry="3" />
+      <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
+      <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
     </svg>
   ),
 };
@@ -67,6 +72,11 @@ export default function ProductDetailPage() {
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadInfo, setDownloadInfo] = useState(null);
 
+  // Coin purchase states
+  const [userProfile, setUserProfile] = useState(null);
+  const [buyingWithCoins, setBuyingWithCoins] = useState(false);
+
+  // ---------- Fetch product ----------
   useEffect(() => {
     const fetchProduct = async () => {
       const snap = await getDoc(doc(db, "products", productId));
@@ -79,7 +89,17 @@ export default function ProductDetailPage() {
     if (productId) fetchProduct();
   }, [productId]);
 
-  // Check purchase status for digital products
+  // ---------- Fetch user profile (for coins) ----------
+  useEffect(() => {
+    if (!user) return;
+    const fetchProfile = async () => {
+      const snap = await getDoc(doc(db, "users", user.uid));
+      if (snap.exists()) setUserProfile(snap.data());
+    };
+    fetchProfile();
+  }, [user]);
+
+  // ---------- Check purchase status for digital products ----------
   useEffect(() => {
     if (!user || !product?.isDigital) return;
     const checkPurchase = async () => {
@@ -108,6 +128,7 @@ export default function ProductDetailPage() {
     checkPurchase();
   }, [user, product]);
 
+  // ---------- Regular download handler ----------
   const handleDownload = async () => {
     if (!user) return toast.error("Please login to download");
     setIsDownloading(true);
@@ -161,6 +182,46 @@ export default function ProductDetailPage() {
     setIsDownloading(false);
   };
 
+  // ---------- Buy with coins handler ----------
+  const handleBuyWithCoins = async () => {
+    if (!user) {
+      toast.error("Please login first");
+      return;
+    }
+    if (!userProfile || (userProfile.coins || 0) < product.coinPrice) {
+      toast.error("Insufficient coins. Earn more by spinning or referring friends!");
+      return;
+    }
+    setBuyingWithCoins(true);
+    try {
+      const res = await fetch("/api/coins/purchase", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-id": user.uid,
+        },
+        body: JSON.stringify({ productId: product.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Purchase failed");
+        setBuyingWithCoins(false);
+        return;
+      }
+
+      // Update local coin balance
+      setUserProfile(prev => ({ ...prev, coins: (prev.coins || 0) - product.coinPrice }));
+
+      // Mark as purchased so download button shows
+      setHasPurchased(true);
+      toast.success("Purchase successful! You can now download the file.");
+    } catch (err) {
+      toast.error("Network error, please try again.");
+    }
+    setBuyingWithCoins(false);
+  };
+
+  // ---------- Early return if product not loaded ----------
   if (!product) {
     return (
       <div className="flex justify-center items-center min-h-[50vh]">
@@ -221,10 +282,17 @@ export default function ProductDetailPage() {
                 <span>{downloadLimit} downloads</span>
                 <span>Secure download</span>
               </div>
+              {/* Coin price display */}
+              {product.coinPrice > 0 && (
+                <div className="flex items-center gap-1 text-sm font-medium text-yellow-700 dark:text-yellow-400">
+                  {DigitalStickers.coin}
+                  <span>{product.coinPrice} coins</span>
+                </div>
+              )}
             </div>
           )}
 
-          {/* ⚠️ WARNING MESSAGE – NEW */}
+          {/* Warning for digital product */}
           {product.isDigital && (
             <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 p-3 rounded-xl text-xs text-yellow-700 dark:text-yellow-400">
               ⚠️ This is a digital product. Download link works only once. For any issue, DM <strong>@QuickShopPro</strong> on Telegram. Free services may have upload limits – we appreciate your patience.
@@ -279,6 +347,30 @@ export default function ProductDetailPage() {
                     </div>
                   )}
                 </>
+              )}
+            </div>
+          )}
+
+          {/* Buy with Coins Button */}
+          {product.isDigital && product.coinPrice > 0 && !hasPurchased && (
+            <div className="mt-4">
+              <button
+                onClick={handleBuyWithCoins}
+                disabled={buyingWithCoins}
+                className="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-2 px-4 rounded-lg w-full flex items-center justify-center gap-2"
+              >
+                {buyingWithCoins ? (
+                  <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
+                ) : (
+                  <>
+                    {DigitalStickers.coin} Buy with {product.coinPrice} Coins
+                  </>
+                )}
+              </button>
+              {userProfile && (
+                <p className="text-xs text-gray-500 mt-1 text-center">
+                  Your balance: {userProfile.coins || 0} coins
+                </p>
               )}
             </div>
           )}
