@@ -4,9 +4,13 @@ export const dynamic = "force-dynamic";
 import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
-import { doc, getDoc, collection, getDocs, addDoc, updateDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
+import {
+  doc, getDoc, collection, getDocs, addDoc,
+  updateDoc, deleteDoc, serverTimestamp
+} from "firebase/firestore";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "react-hot-toast";
+import { sendNotification } from "@/lib/notifications";
 import Link from "next/link";
 
 /* ────────────── SVG Icons ────────────── */
@@ -94,8 +98,8 @@ const YouTubeEmbed = ({ videoId }) => (
   </div>
 );
 
-/* ────────────── JITSI CALL MODAL ────────────── */
-const JitsiCallModal = ({ groupId, onClose }: { groupId: string; onClose: () => void }) => {
+/* ────────────── JITSI CALL MODAL (no TypeScript) ────────────── */
+const JitsiCallModal = ({ groupId, onClose }) => {
   const roomName = `Group_${groupId.replace(/[^a-zA-Z0-9]/g, "_")}`;
   return (
     <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-2">
@@ -120,12 +124,12 @@ const JitsiCallModal = ({ groupId, onClose }: { groupId: string; onClose: () => 
 /* ────────────── MAIN COMPONENT ────────────── */
 export default function GroupDetailPage() {
   const params = useParams();
-  const groupId = params.groupId as string;
+  const groupId = params.groupId;
   const { user } = useAuth();
   const router = useRouter();
 
-  const [group, setGroup] = useState<any>(null);
-  const [posts, setPosts] = useState<any[]>([]);
+  const [group, setGroup] = useState(null);
+  const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [memberCount, setMemberCount] = useState(0);
   const [isMember, setIsMember] = useState(false);
@@ -136,13 +140,13 @@ export default function GroupDetailPage() {
   const [showMenu, setShowMenu] = useState(false);
   const [showCall, setShowCall] = useState(false);
   const [sendingNotification, setSendingNotification] = useState(false);
-  const editDescRef = useRef<HTMLDivElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const editDescRef = useRef(null);
+  const menuRef = useRef(null);
 
   // Close dropdown on outside click
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
         setShowMenu(false);
       }
     };
@@ -189,10 +193,7 @@ export default function GroupDetailPage() {
   }, [groupId, user, router]);
 
   const handleJoin = async () => {
-    if (!user) {
-      toast.error("Please login");
-      return;
-    }
+    if (!user) { toast.error("Please login"); return; }
     try {
       await addDoc(collection(db, "groups", groupId, "members"), {
         userId: user.uid,
@@ -239,7 +240,7 @@ export default function GroupDetailPage() {
         name: newName,
         description: newDescription,
       });
-      setGroup((prev: any) => ({ ...prev, name: newName, description: newDescription }));
+      setGroup((prev) => ({ ...prev, name: newName, description: newDescription }));
       setEditing(false);
       toast.success("Group updated!");
     } catch (err) {
@@ -265,7 +266,7 @@ export default function GroupDetailPage() {
     }
   };
 
-  const handleToolbar = (cmd: string, value: string | null = null) => {
+  const handleToolbar = (cmd, value = null) => {
     document.execCommand(cmd, false, value);
     editDescRef.current?.focus();
   };
@@ -287,6 +288,7 @@ export default function GroupDetailPage() {
     }, 500);
   };
 
+  /* ---- send notification directly to Firestore (no API needed) ---- */
   const startCall = async () => {
     if (!user) {
       toast.error("Please login first");
@@ -294,28 +296,35 @@ export default function GroupDetailPage() {
     }
     setSendingNotification(true);
     try {
-      const res = await fetch("/api/send-call-notification", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          groupId,
-          callerName: user.displayName || user.email || "Someone",
-          callerId: user.uid,
-        }),
+      // Fetch all group members
+      const membersSnap = await getDocs(collection(db, "groups", groupId, "members"));
+      const promises = [];
+      membersSnap.docs.forEach((memberDoc) => {
+        const memberData = memberDoc.data();
+        if (memberData.userId !== user.uid) {
+          // Send notification to other members
+          const notifPromise = sendNotification(
+            memberData.userId,
+            "system",
+            "Video Call Started",
+            `${user.email || "Someone"} started a video call in the group. Join now!`,
+            `/community/groups/${groupId}`
+          );
+          promises.push(notifPromise);
+        }
       });
-      const data = await res.json();
-      if (data.success) {
-        toast.success(`Call notification sent to ${data.successCount} members`);
+      await Promise.all(promises);
+      if (promises.length > 0) {
+        toast.success(`Call notification sent to ${promises.length} member${promises.length > 1 ? 's' : ''}`);
       } else {
-        toast.error("Failed to send notifications, but you can still call");
+        toast("No other members to notify, but you can start the call.");
       }
-      setShowCall(true);
     } catch (err) {
       console.error(err);
-      toast.error("Could not send notifications, starting call anyway");
-      setShowCall(true);
+      toast.error("Could not send notifications, but you can still start the call.");
     } finally {
       setSendingNotification(false);
+      setShowCall(true);
     }
   };
 
@@ -329,7 +338,7 @@ export default function GroupDetailPage() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
-      {/* Group Card – no white overlay, fully dark mode compatible */}
+      {/* Group Card */}
       <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-800 mb-6 overflow-hidden">
         <div className="p-5 md:p-6">
           {/* ===== TOP ROW ===== */}
@@ -489,7 +498,7 @@ export default function GroupDetailPage() {
             </div>
           )}
 
-          {/* ===== GROUP DESCRIPTION (view mode) – perfect dark mode ===== */}
+          {/* ===== GROUP DESCRIPTION (view mode) ===== */}
           {!editing && group.description && (
             <div className="mt-5 pt-4 border-t border-gray-100 dark:border-gray-800">
               <div
@@ -520,7 +529,7 @@ export default function GroupDetailPage() {
       )}
       <div className="space-y-5">
         {posts.map((post) => {
-          const renderWithMentions = (text: string) => {
+          const renderWithMentions = (text) => {
             if (!text) return "";
             return text.replace(/@([a-zA-Z0-9_.]+)/g, '<span class="text-primary-600 font-medium">@$1</span>');
           };
