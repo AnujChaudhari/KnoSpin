@@ -1,10 +1,9 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { db } from "@/lib/firebase";
-import { doc, getDoc, updateDoc, addDoc, collection, serverTimestamp, increment } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "react-hot-toast";
-import { unlockAchievement } from "@/lib/gamification";
 
 const rewards = [5, 10, 20, 50, 100, 5, 10, 20];
 const SEGMENT_COUNT = 8;
@@ -33,29 +32,31 @@ export default function SpinWheel() {
   const [subscriptionTier, setSubscriptionTier] = useState("free");
   const wheelRef = useRef(null);
 
+  // Refetch fresh user data from Firestore (used after spin)
+  const refreshUserData = async () => {
+    if (!user) return;
+    const snap = await getDoc(doc(db, "users", user.uid));
+    if (snap.exists()) {
+      const data = snap.data();
+      setUserLevel(data.level || 1);
+      setUserXp(data.xp || 0);
+      setUserCoins(data.coinBalance || 0);
+      setTotalSpins(data.totalSpins || 0);
+      setSubscriptionTier(data.subscriptionTier || "free");
+
+      const lastSpin = data.lastSpinAt?.toDate?.();
+      if (lastSpin) {
+        const cooldownEnd = new Date(lastSpin.getTime() + 24 * 60 * 60 * 1000);
+        setSpinUsed(new Date() < cooldownEnd);
+      } else {
+        setSpinUsed(false);
+      }
+    }
+  };
+
   useEffect(() => {
     if (!user) return;
-    const fetchUserData = async () => {
-      try {
-        const snap = await getDoc(doc(db, "users", user.uid));
-        if (!snap.exists()) return;
-        const data = snap.data();
-        setUserLevel(data.level || 1);
-        setUserXp(data.xp || 0);
-        setUserCoins(data.coinBalance || 0);
-        setTotalSpins(data.totalSpins || 0);
-        setSubscriptionTier(data.subscriptionTier || "free");
-
-        const lastSpin = data.lastSpinAt?.toDate?.();
-        if (lastSpin) {
-          const cooldownEnd = new Date(lastSpin.getTime() + 24 * 60 * 60 * 1000);
-          setSpinUsed(new Date() < cooldownEnd);
-        }
-      } catch (err) {
-        console.error("Failed to load spin data", err);
-      }
-    };
-    fetchUserData();
+    refreshUserData();
   }, [user]);
 
   const handleSpin = async () => {
@@ -71,71 +72,40 @@ export default function SpinWheel() {
         body: JSON.stringify({ userId: user.uid }),
       });
 
+      const json = await res.json();
       if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        toast.error(err.error || "Spin failed");
+        toast.error(json.error || "Spin failed");
         setSpinning(false);
         return;
       }
 
-      const data = await res.json();
-      const win = data.coins;
-      const winIndex = rewards.indexOf(win);
-      const segmentIndex = winIndex >= 0 ? winIndex : Math.floor(Math.random() * SEGMENT_COUNT);
+      const win = json.coins;
 
+      // Animate wheel
+      const randomIndex = Math.floor(Math.random() * SEGMENT_COUNT);
       const fullSpins = 5 * 360;
-      const targetAngle = fullSpins + (SEGMENT_ANGLE * (SEGMENT_COUNT - segmentIndex)) + Math.random() * SEGMENT_ANGLE;
+      const targetAngle = fullSpins + (SEGMENT_ANGLE * (SEGMENT_COUNT - randomIndex)) + Math.random() * SEGMENT_ANGLE;
       setRotation(prev => prev + targetAngle);
 
+      // After animation completes, update UI with fresh Firestore data
       setTimeout(async () => {
         setSpinning(false);
         setResult(win);
-        setSpinUsed(true);
 
-        const userRef = doc(db, "users", user.uid);
-        try {
-          await updateDoc(userRef, {
-            coinBalance: increment(win),
-            xp: increment(5),
-            lastSpinAt: serverTimestamp(),
-            totalSpins: increment(1),
-          });
+        // API already updated coinBalance, xp, lastSpinAt, totalSpins.
+        // We just need to fetch the latest values.
+        await refreshUserData();
 
-          const updatedSnap = await getDoc(userRef);
-          if (updatedSnap.exists()) {
-            const userData = updatedSnap.data();
-            const newXp = userData.xp || 0;
-            const newLevel = Math.floor(Math.sqrt(newXp / 100));
-            if (newLevel > (userData.level || 1)) {
-              await updateDoc(userRef, { level: newLevel });
-              toast.success(`🎉 Level Up! You are now Level ${newLevel}!`);
-            }
-            setTotalSpins(userData.totalSpins || 0);
-            setUserLevel(newLevel);
-            setUserXp(newXp);
-            setUserCoins(userData.coinBalance || 0);
-          }
-
-          await addDoc(collection(db, "wallet_transactions"), {
-            userId: user.uid,
-            type: "admin_bonus",
-            amount: 0,
-            coins: win,
-            description: "Daily spin reward",
-            createdAt: serverTimestamp(),
-          });
-
-          toast.success(`You won ${win} coins! 🎉`);
-        } catch (err) {
-          console.error("Spin update failed", err);
-        }
+        toast.success(`You won ${win} coins! 🎉`);
       }, 5000);
     } catch (err) {
-      toast.error("Network error");
+      console.error(err);
+      toast.error("Network error. Please try again.");
       setSpinning(false);
     }
   };
 
+  // Only show for free users
   if (!user || subscriptionTier !== "free") return null;
 
   const gradientParts = SEGMENT_COLORS.map((color, i) => {
@@ -148,6 +118,8 @@ export default function SpinWheel() {
   return (
     <div className="card text-center max-w-sm mx-auto">
       <h3 className="font-bold text-lg mb-4">🎡 Daily Spin & Win</h3>
+
+      {/* User stats */}
       <div className="flex justify-center items-center gap-4 mb-6 flex-wrap">
         <div className="bg-purple-100 dark:bg-purple-900/30 px-3 py-1 rounded-full text-sm font-bold text-purple-700 dark:text-purple-300">
           Lv. {userLevel}
@@ -163,6 +135,7 @@ export default function SpinWheel() {
         </div>
       </div>
 
+      {/* Wheel */}
       <div className="relative w-60 h-60 mx-auto mb-4">
         <Pointer />
         <div
@@ -197,6 +170,7 @@ export default function SpinWheel() {
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 bg-white dark:bg-gray-700 rounded-full shadow-inner" />
       </div>
 
+      {/* Result */}
       {result && (
         <div className="bg-green-100 dark:bg-green-900/30 p-3 rounded-xl mb-4 animate-fade-in">
           <p className="text-2xl font-bold text-green-600">+{result} Coins!</p>
@@ -204,6 +178,7 @@ export default function SpinWheel() {
         </div>
       )}
 
+      {/* Spin button */}
       <button
         onClick={handleSpin}
         disabled={spinning || spinUsed}
