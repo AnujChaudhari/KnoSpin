@@ -2,9 +2,9 @@
 export const dynamic = 'force-dynamic';
 
 import { useState, useEffect } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
-import { useRouter } from "next/navigation";
 import {
   addDoc, collection, serverTimestamp, doc, getDoc,
   updateDoc, increment, getDocs, query, where, orderBy, limit, setDoc
@@ -54,12 +54,31 @@ const WarningIcon = () => (
     <line x1="12" y1="17" x2="12.01" y2="17" />
   </svg>
 );
+const StarIcon = () => (
+  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.56 5.82 22 7 14.14 2 9.27l6.91-1.01L12 2z" />
+  </svg>
+);
+
+/* ---------- Subscription Plan Info ---------- */
+const PLANS = {
+  premium_lite: { name: "Premium Lite", yearly: 349, monthly: 32 },
+  premium_pro: { name: "Premium Pro", yearly: 599, monthly: 56 },
+};
 
 export default function CheckoutPage() {
   const { cart, cartTotal, clearCart } = useCart();
   const { user } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
+  // --- Subscription mode ---
+  const subPlan = searchParams.get("plan");        // "premium_lite" | "premium_pro"
+  const subCycle = searchParams.get("cycle") || "yearly"; // "yearly" | "monthly"
+  const isSubscription = !!subPlan && PLANS[subPlan];
+  const subPrice = isSubscription ? PLANS[subPlan][subCycle] : 0;
+
+  // --- Regular cart mode ---
   const [address, setAddress] = useState({ name: "", phone: "", street: "", city: "", pincode: "" });
   const [paymentMethod, setPaymentMethod] = useState("razorpay");
   const [userProfile, setUserProfile] = useState(null);
@@ -67,12 +86,12 @@ export default function CheckoutPage() {
   const [coinsToUse, setCoinsToUse] = useState(0);
   const [placing, setPlacing] = useState(false);
 
-  const hasPhysical = cart.some(item => !item.isDigital);
-  const hasDigital  = cart.some(item => item.isDigital);
-  const allDigital  = cart.every(item => item.isDigital);
-  const coinsAllowed = allDigital && (userProfile?.coinBalance ?? 0) > 0;
+  const hasPhysical = !isSubscription && cart.some(item => !item.isDigital);
+  const hasDigital  = !isSubscription && cart.some(item => item.isDigital);
+  const allDigital  = !isSubscription && cart.every(item => item.isDigital);
+  const coinsAllowed = allDigital && !isSubscription && (userProfile?.coinBalance ?? 0) > 0;
   const coinDiscount = useCoins ? Math.min(coinsToUse, userProfile?.coinBalance ?? 0) : 0;
-  const finalTotal = Math.max(0, cartTotal - coinDiscount);
+  const finalTotal = isSubscription ? subPrice : Math.max(0, cartTotal - coinDiscount);
 
   useEffect(() => {
     if (!user) return;
@@ -83,18 +102,94 @@ export default function CheckoutPage() {
     fetchProfile();
   }, [user]);
 
+  // ---------- Place Subscription Order ----------
+  const handleSubscriptionPayment = async () => {
+    if (!user) return toast.error("Please login");
+    if (placing) return;
+    setPlacing(true);
+
+    try {
+      // 1. Create Razorpay order for subscription amount
+      const res = await fetch("/api/razorpay/subscription-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan: subPlan, cycle: subCycle }),
+      });
+      const data = await res.json();
+      if (!data.id) throw new Error("Failed to create order");
+
+      const isLoaded = await loadRazorpay();
+      if (!isLoaded) { setPlacing(false); return toast.error("Razorpay SDK failed"); }
+
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: data.amount,
+        currency: "INR",
+        name: "Quick Shop",
+        order_id: data.id,
+        handler: async function (response) {
+          // 2. Verify payment
+          const verifyRes = await fetch("/api/razorpay/verify", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ...response, orderId: data.id }),
+          });
+          const verifyData = await verifyRes.json();
+          if (!verifyData.success) {
+            toast.error("Payment verification failed");
+            setPlacing(false);
+            return;
+          }
+
+          // 3. Save subscription order and update user
+          const now = new Date();
+          const endDate = subCycle === "yearly"
+            ? new Date(now.setFullYear(now.getFullYear() + 1))
+            : new Date(now.setDate(now.getDate() + 30));
+
+          await addDoc(collection(db, "subscriptionOrders"), {
+            userId: user.uid,
+            plan: subPlan,
+            billingCycle: subCycle,
+            amount: subPrice,
+            razorpayPaymentId: response.razorpay_payment_id,
+            razorpayOrderId: data.id,
+            status: "paid",
+            createdAt: serverTimestamp(),
+            subscriptionStart: serverTimestamp(),
+            subscriptionEnd: endDate,
+          });
+
+          await updateDoc(doc(db, "users", user.uid), {
+            subscriptionTier: subPlan,
+            subscriptionExpiry: endDate,
+            "premiumDetails.verified": true,
+          });
+
+          sendNotification(user.uid, "system", "Subscription Activated",
+            `You are now on ${PLANS[subPlan].name}! Enjoy premium features.`, "/dashboard");
+
+          toast.success("Subscription activated! 🎉");
+          router.push("/dashboard?upgraded=true");
+        },
+        theme: { color: "#3b82f6" },
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+    } catch (err) {
+      toast.error("Payment initiation failed");
+      console.error(err);
+      setPlacing(false);
+    }
+  };
+
+  // ---------- Place Regular Order (existing logic) ----------
   const handlePlaceOrder = async () => {
     if (!user) return toast.error("Please login first");
     if (cart.length === 0) return toast.error("Cart is empty");
-
-    if (hasPhysical && (!address.name || !address.phone)) {
-      return toast.error("Fill all address fields");
-    }
-
-    if (hasDigital && paymentMethod !== "razorpay") {
-      return toast.error("Orders with digital products require online payment.");
-    }
-
+    if (hasPhysical && (!address.name || !address.phone)) return toast.error("Fill all address fields");
+    if (hasDigital && paymentMethod !== "razorpay") return toast.error("Digital products require online payment.");
     if (placing) return;
     setPlacing(true);
 
@@ -116,7 +211,7 @@ export default function CheckoutPage() {
     // Coins deduction
     if (useCoins && coinDiscount > 0) {
       await updateDoc(doc(db, "users", user.uid), { coinBalance: increment(-coinDiscount) });
-      const txRef = await addDoc(collection(db, "wallet_transactions"), {
+      await addDoc(collection(db, "wallet_transactions"), {
         userId: user.uid,
         type: "purchase",
         amount: 0,
@@ -128,12 +223,9 @@ export default function CheckoutPage() {
     }
 
     const finalizeOrder = async (paymentDetails = {}) => {
-      const docRef = await addDoc(collection(db, "orders"), {
-        ...orderData,
-        ...paymentDetails,
-      });
+      const docRef = await addDoc(collection(db, "orders"), { ...orderData, ...paymentDetails });
 
-      // Patch coin transaction with real order id
+      // Update coin transaction with real order id
       if (useCoins && coinDiscount > 0) {
         const txSnap = await getDocs(query(
           collection(db, "wallet_transactions"),
@@ -193,11 +285,9 @@ export default function CheckoutPage() {
       }
 
       clearCart();
-      const redirectUrl = `/order-confirmation?id=${docRef.id}${tokenParam ? `&tokens=${encodeURIComponent(tokenParam)}` : ''}`;
-      router.push(redirectUrl);
+      router.push(`/order-confirmation?id=${docRef.id}${tokenParam ? `&tokens=${encodeURIComponent(tokenParam)}` : ''}`);
     };
 
-    // Razorpay flow
     if (paymentMethod === "razorpay") {
       try {
         const res = await fetch("/api/razorpay/order", {
@@ -207,7 +297,7 @@ export default function CheckoutPage() {
         });
         const data = await res.json();
         const isLoaded = await loadRazorpay();
-        if (!isLoaded) { setPlacing(false); return toast.error("Razorpay SDK failed to load"); }
+        if (!isLoaded) { setPlacing(false); return toast.error("Razorpay SDK failed"); }
 
         const options = {
           key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
@@ -227,7 +317,6 @@ export default function CheckoutPage() {
                 paymentId: response.razorpay_payment_id,
                 paymentStatus: "paid",
               });
-              toast.success("Payment successful!");
             } else {
               toast.error("Payment verification failed");
               setPlacing(false);
@@ -243,98 +332,94 @@ export default function CheckoutPage() {
         setPlacing(false);
       }
     } else {
-      // COD
       await finalizeOrder({ paymentStatus: "pending" });
       toast.success("Order placed successfully!");
     }
   };
 
+  // ==================== UI RENDER ====================
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-8 flex items-center gap-3">
         <SecureIcon />
-        Secure Checkout
+        {isSubscription ? "Upgrade Subscription" : "Secure Checkout"}
       </h1>
 
-      <div className="space-y-6">
-        {hasPhysical && (
-          <div className="card">
-            <h2 className="font-semibold mb-4 flex items-center gap-2">
-              <LocationIcon /> Shipping Address
-            </h2>
-            <input placeholder="Full Name" value={address.name} onChange={e => setAddress({...address, name: e.target.value})} className="input-field" />
-            <input placeholder="Phone" value={address.phone} onChange={e => setAddress({...address, phone: e.target.value})} className="input-field" />
-            <input placeholder="Street" value={address.street} onChange={e => setAddress({...address, street: e.target.value})} className="input-field" />
-            <div className="grid grid-cols-2 gap-3">
-              <input placeholder="City" value={address.city} onChange={e => setAddress({...address, city: e.target.value})} className="input-field" />
-              <input placeholder="Pincode" value={address.pincode} onChange={e => setAddress({...address, pincode: e.target.value})} className="input-field" />
-            </div>
-          </div>
-        )}
-
-        {coinsAllowed && (
-          <div className="card">
-            <h2 className="font-semibold mb-3 flex items-center gap-2">
-              <CoinIcon /> Use Coins (Digital Products Only)
-            </h2>
-            <p className="text-sm mb-2">
-              Available: <strong>{userProfile.coinBalance}</strong> coins (1 coin = ₹1 discount)
-            </p>
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={useCoins}
-                onChange={(e) => {
-                  setUseCoins(e.target.checked);
-                  if (!e.target.checked) setCoinsToUse(0);
-                }}
-              />
-              Use coins for discount
-            </label>
-            {useCoins && (
-              <input
-                type="number"
-                min={1}
-                max={userProfile.coinBalance}
-                value={coinsToUse}
-                onChange={(e) => setCoinsToUse(Math.min(Number(e.target.value), userProfile.coinBalance))}
-                placeholder="Enter coins to use"
-                className="input-field mt-2"
-              />
+      {/* Subscription details */}
+      {isSubscription && (
+        <div className="card mb-6">
+          <h2 className="font-semibold mb-2 flex items-center gap-2"><StarIcon /> Plan Summary</h2>
+          <p className="text-lg font-bold">{PLANS[subPlan].name}</p>
+          <p className="text-sm text-gray-500">{subCycle === "yearly" ? "Yearly" : "Monthly"} billing</p>
+          <p className="text-2xl font-bold mt-2">₹{subPrice}</p>
+          <ul className="mt-4 space-y-1 text-sm">
+            {subPlan === "premium_lite" && (
+              <>
+                <li>✅ Downloadable notes (PDFs)</li>
+                <li>✅ Assignments with solutions</li>
+                <li>✅ Project files & templates</li>
+                <li>✅ Selected paid courses</li>
+                <li>✅ No ads</li>
+              </>
             )}
-            {coinDiscount > 0 && (
-              <p className="text-green-600 text-sm mt-2 flex items-center gap-1">
-                <CoinIcon /> You save ₹{coinDiscount} with coins!
-              </p>
+            {subPlan === "premium_pro" && (
+              <>
+                <li>✅ All Premium Lite features</li>
+                <li>✅ 15+ Personality Development subjects</li>
+                <li>✅ Advanced projects with source code</li>
+                <li>✅ All paid courses</li>
+                <li>✅ Priority support</li>
+              </>
             )}
-          </div>
-        )}
+          </ul>
+        </div>
+      )}
 
+      {/* Address (only for physical items) */}
+      {hasPhysical && (
         <div className="card">
-          <h2 className="font-semibold mb-4 flex items-center gap-2">
-            <OnlinePayIcon /> Payment Method
-          </h2>
+          <h2 className="font-semibold mb-4 flex items-center gap-2"><LocationIcon /> Shipping Address</h2>
+          <input placeholder="Full Name" value={address.name} onChange={e => setAddress({...address, name: e.target.value})} className="input-field" />
+          <input placeholder="Phone" value={address.phone} onChange={e => setAddress({...address, phone: e.target.value})} className="input-field" />
+          <input placeholder="Street" value={address.street} onChange={e => setAddress({...address, street: e.target.value})} className="input-field" />
+          <div className="grid grid-cols-2 gap-3">
+            <input placeholder="City" value={address.city} onChange={e => setAddress({...address, city: e.target.value})} className="input-field" />
+            <input placeholder="Pincode" value={address.pincode} onChange={e => setAddress({...address, pincode: e.target.value})} className="input-field" />
+          </div>
+        </div>
+      )}
+
+      {/* Coins (only for all‑digital cart) */}
+      {coinsAllowed && (
+        <div className="card">
+          <h2 className="font-semibold mb-3 flex items-center gap-2"><CoinIcon /> Use Coins (Digital Products Only)</h2>
+          <p className="text-sm mb-2">Available: <strong>{userProfile.coinBalance}</strong> coins (1 coin = ₹1 discount)</p>
+          <label className="flex items-center gap-2">
+            <input type="checkbox" checked={useCoins} onChange={(e) => { setUseCoins(e.target.checked); if (!e.target.checked) setCoinsToUse(0); }} />
+            Use coins for discount
+          </label>
+          {useCoins && (
+            <input type="number" min={1} max={userProfile.coinBalance} value={coinsToUse}
+              onChange={(e) => setCoinsToUse(Math.min(Number(e.target.value), userProfile.coinBalance))}
+              placeholder="Enter coins to use" className="input-field mt-2" />
+          )}
+          {coinDiscount > 0 && (
+            <p className="text-green-600 text-sm mt-2 flex items-center gap-1"><CoinIcon /> You save ₹{coinDiscount} with coins!</p>
+          )}
+        </div>
+      )}
+
+      {/* Payment Method (only for regular orders; subscription always online) */}
+      {!isSubscription && (
+        <div className="card">
+          <h2 className="font-semibold mb-4 flex items-center gap-2"><OnlinePayIcon /> Payment Method</h2>
           <div className="flex flex-wrap gap-4">
             {!hasDigital && (
-              <button
-                onClick={() => setPaymentMethod("cod")}
-                className={`py-3 px-5 rounded-xl border flex items-center gap-2 transition ${
-                  paymentMethod === "cod"
-                    ? "bg-primary-600 text-white border-primary-600 shadow-lg"
-                    : "border-gray-300 hover:border-gray-400 dark:border-gray-600"
-                }`}
-              >
+              <button onClick={() => setPaymentMethod("cod")} className={`py-3 px-5 rounded-xl border flex items-center gap-2 transition ${paymentMethod === "cod" ? "bg-primary-600 text-white border-primary-600 shadow-lg" : "border-gray-300 hover:border-gray-400 dark:border-gray-600"}`}>
                 <CashIcon /> Cash on Delivery
               </button>
             )}
-            <button
-              onClick={() => setPaymentMethod("razorpay")}
-              className={`py-3 px-5 rounded-xl border flex items-center gap-2 transition ${
-                paymentMethod === "razorpay"
-                  ? "bg-primary-600 text-white border-primary-600 shadow-lg"
-                  : "border-gray-300 hover:border-gray-400 dark:border-gray-600"
-              }`}
-            >
+            <button onClick={() => setPaymentMethod("razorpay")} className={`py-3 px-5 rounded-xl border flex items-center gap-2 transition ${paymentMethod === "razorpay" ? "bg-primary-600 text-white border-primary-600 shadow-lg" : "border-gray-300 hover:border-gray-400 dark:border-gray-600"}`}>
               <OnlinePayIcon /> Pay Online
             </button>
           </div>
@@ -345,21 +430,24 @@ export default function CheckoutPage() {
             </div>
           )}
         </div>
+      )}
 
-        <div className="card">
-          <div className="flex justify-between items-center text-lg font-bold">
-            <div>
-              {coinDiscount > 0 && (
-                <p className="text-sm text-green-600 flex items-center gap-1">
-                  <CoinIcon /> Coin Discount: -₹{coinDiscount}
-                </p>
-              )}
-              <span>Total: ₹{finalTotal}</span>
-            </div>
-            <button onClick={handlePlaceOrder} disabled={placing} className="btn-gradient px-6 py-3">
-              {placing ? "Placing..." : "Place Order"}
-            </button>
+      {/* Total & Action */}
+      <div className="card mt-6">
+        <div className="flex justify-between items-center text-lg font-bold">
+          <div>
+            {coinDiscount > 0 && (
+              <p className="text-sm text-green-600 flex items-center gap-1"><CoinIcon /> Coin Discount: -₹{coinDiscount}</p>
+            )}
+            <span>Total: ₹{finalTotal}</span>
           </div>
+          <button
+            onClick={isSubscription ? handleSubscriptionPayment : handlePlaceOrder}
+            disabled={placing}
+            className="btn-gradient px-6 py-3"
+          >
+            {placing ? "Processing..." : isSubscription ? "Pay & Upgrade" : "Place Order"}
+          </button>
         </div>
       </div>
     </div>
