@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/firebase";
-import { doc, getDoc, updateDoc, increment, serverTimestamp, addDoc, collection } from "firebase/firestore";
+import { doc, getDoc, updateDoc, increment, serverTimestamp } from "firebase/firestore";
 
 export async function POST(request) {
   try {
@@ -11,21 +11,23 @@ export async function POST(request) {
 
     const userRef = doc(db, "users", userId);
     const userSnap = await getDoc(userRef);
+
     if (!userSnap.exists()) {
-      return NextResponse.json({ error: "User document not found" }, { status: 404 });
+      return NextResponse.json({ error: "User document not found. Please complete signup." }, { status: 404 });
     }
 
     const data = userSnap.data();
 
-    // ✅ केवल free users ही spin कर सकते हैं
+    // 🔒 केवल free users spin kar sakte hain
     if (data.subscriptionTier && data.subscriptionTier !== "free") {
-      return NextResponse.json({ error: "Spin is only for free users" }, { status: 403 });
+      return NextResponse.json({ error: "Spin is only available for free users." }, { status: 403 });
     }
 
-    // 24 घंटे का cooldown
+    // ⏳ Cooldown check (24 घंटे)
     const now = new Date();
     const lastSpin = data.lastSpinAt?.toDate?.();
-    const cooldownMs = 24 * 60 * 60 * 1000;
+    const cooldownMs = 24 * 60 * 60 * 1000; // 24 hours
+
     if (lastSpin && (now - lastSpin) < cooldownMs) {
       const nextAvailable = new Date(lastSpin.getTime() + cooldownMs);
       return NextResponse.json({
@@ -34,28 +36,21 @@ export async function POST(request) {
       }, { status: 429 });
     }
 
-    // 1–100 रैंडम coins
+    // 🎲 Random coins (1–100)
     const win = Math.floor(Math.random() * 100) + 1;
 
-    // ✅ सही फ़ील्ड नाम `coinBalance` का उपयोग करें
+    // ✅ सही field name: coinBalance (na ki coins)
     await updateDoc(userRef, {
-      coinBalance: increment(win),   // ✅ यहाँ बदलाव – `coins` नहीं
+      coinBalance: increment(win),
       lastSpinAt: serverTimestamp(),
-      xp: increment(5),
       totalSpins: increment(1),
+      xp: increment(5),
     });
 
-    // वॉलेट ट्रांज़ैक्शन रिकॉर्ड (ऐच्छिक, लेकिन अच्छा)
-    await addDoc(collection(db, "wallet_transactions"), {
-      userId,
-      type: "admin_bonus",
-      amount: 0,
+    return NextResponse.json({
       coins: win,
-      description: "Daily spin reward",
-      createdAt: serverTimestamp(),
+      message: `You won ${win} coins!`,
     });
-
-    return NextResponse.json({ coins: win, message: `You won ${win} coins!` });
   } catch (error) {
     console.error("Spin API error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
