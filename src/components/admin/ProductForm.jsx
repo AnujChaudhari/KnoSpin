@@ -39,7 +39,8 @@ export default function ProductForm({ onSubmit, initialData = {} }) {
     isDigital: initialData.isDigital || false,
     digitalCategory: initialData.digitalCategory || "",
     downloadLimit: initialData.downloadLimit || 5,
-    digitalUrl: initialData.digitalUrl || "",       // ✅ External URL field
+    digitalUrl: initialData.digitalUrl || "",
+    coinPrice: initialData.coinPrice || "",           // ✅ NEW FIELD
   });
   const [images, setImages] = useState([]);
   const [digitalFile, setDigitalFile] = useState(null);
@@ -147,7 +148,8 @@ export default function ProductForm({ onSubmit, initialData = {} }) {
       digitalFileUrl,
       digitalFileName,
       digitalFileSize: digitalFile?.size || initialData.digitalFileSize || 0,
-      digitalUrl: form.digitalUrl,   // ✅ external URL save
+      digitalUrl: form.digitalUrl,
+      coinPrice: form.coinPrice ? Number(form.coinPrice) : null,   // ✅ save coinPrice
     };
 
     onSubmit(finalData, images);
@@ -238,7 +240,7 @@ export default function ProductForm({ onSubmit, initialData = {} }) {
                 <p className="text-xs text-gray-400 mt-1">Max 50MB | PDF, ZIP, DOC, PPT, TXT, Images, Video</p>
               </div>
 
-              {/* ✅ New: External URL field */}
+              {/* External URL field */}
               <div>
                 <label className="text-sm">External Download URL (optional)</label>
                 <input
@@ -250,6 +252,21 @@ export default function ProductForm({ onSubmit, initialData = {} }) {
                   className="input-field"
                 />
                 <p className="text-xs text-gray-400 mt-1">If you prefer to use an external link, paste it here. It will be delivered uniquely per purchase.</p>
+              </div>
+
+              {/* Price in Coins – NEW */}
+              <div>
+                <label className="text-sm">Price in Coins (for digital products only)</label>
+                <input
+                  type="number"
+                  name="coinPrice"
+                  value={form.coinPrice || ''}
+                  onChange={handleChange}
+                  min={0}
+                  placeholder="e.g., 100"
+                  className="input-field w-32"
+                />
+                <p className="text-xs text-gray-400 mt-1">Leave 0 or empty to not allow coin purchase</p>
               </div>
 
               <div>
