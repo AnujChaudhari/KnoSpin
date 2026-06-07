@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { db } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc, increment, serverTimestamp } from "firebase/firestore";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "react-hot-toast";
 
@@ -32,7 +32,6 @@ export default function SpinWheel() {
   const [subscriptionTier, setSubscriptionTier] = useState("free");
   const wheelRef = useRef(null);
 
-  // Refetch fresh user data from Firestore (used after spin)
   const refreshUserData = async () => {
     if (!user) return;
     const snap = await getDoc(doc(db, "users", user.uid));
@@ -65,47 +64,40 @@ export default function SpinWheel() {
     setSpinning(true);
     setResult(null);
 
-    try {
-      const res = await fetch("/api/spin", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.uid }),
-      });
+    // ✅ Firestore rules allow these fields only
+    const win = Math.floor(Math.random() * 100) + 1;
 
-      const json = await res.json();
-      if (!res.ok) {
-        toast.error(json.error || "Spin failed");
-        setSpinning(false);
-        return;
-      }
+    // Animate wheel
+    const randomIndex = Math.floor(Math.random() * SEGMENT_COUNT);
+    const fullSpins = 5 * 360;
+    const targetAngle = fullSpins + (SEGMENT_ANGLE * (SEGMENT_COUNT - randomIndex)) + Math.random() * SEGMENT_ANGLE;
+    setRotation(prev => prev + targetAngle);
 
-      const win = json.coins;
+    setTimeout(async () => {
+      try {
+        // सीधे Firestore अपडेट करें (API की जरूरत नहीं)
+        const userRef = doc(db, "users", user.uid);
+        await updateDoc(userRef, {
+          coinBalance: increment(win),
+          lastSpinAt: serverTimestamp(),
+          totalSpins: increment(1),
+          xp: increment(5),
+        });
 
-      // Animate wheel
-      const randomIndex = Math.floor(Math.random() * SEGMENT_COUNT);
-      const fullSpins = 5 * 360;
-      const targetAngle = fullSpins + (SEGMENT_ANGLE * (SEGMENT_COUNT - randomIndex)) + Math.random() * SEGMENT_ANGLE;
-      setRotation(prev => prev + targetAngle);
-
-      // After animation completes, update UI with fresh Firestore data
-      setTimeout(async () => {
-        setSpinning(false);
-        setResult(win);
-
-        // API already updated coinBalance, xp, lastSpinAt, totalSpins.
-        // We just need to fetch the latest values.
+        // ताज़ा डेटा फ़ेच करें
         await refreshUserData();
 
+        setSpinning(false);
+        setResult(win);
         toast.success(`You won ${win} coins! 🎉`);
-      }, 5000);
-    } catch (err) {
-      console.error(err);
-      toast.error("Network error. Please try again.");
-      setSpinning(false);
-    }
+      } catch (err) {
+        console.error(err);
+        toast.error("Failed to update coins. Please try again.");
+        setSpinning(false);
+      }
+    }, 5000);
   };
 
-  // Only show for free users
   if (!user || subscriptionTier !== "free") return null;
 
   const gradientParts = SEGMENT_COLORS.map((color, i) => {
@@ -119,23 +111,13 @@ export default function SpinWheel() {
     <div className="card text-center max-w-sm mx-auto">
       <h3 className="font-bold text-lg mb-4">🎡 Daily Spin & Win</h3>
 
-      {/* User stats */}
       <div className="flex justify-center items-center gap-4 mb-6 flex-wrap">
-        <div className="bg-purple-100 dark:bg-purple-900/30 px-3 py-1 rounded-full text-sm font-bold text-purple-700 dark:text-purple-300">
-          Lv. {userLevel}
-        </div>
-        <div className="bg-blue-100 dark:bg-blue-900/30 px-3 py-1 rounded-full text-sm font-bold text-blue-700 dark:text-blue-300">
-          {userXp} XP
-        </div>
-        <div className="bg-yellow-100 dark:bg-yellow-900/30 px-3 py-1 rounded-full text-sm font-bold text-yellow-700 dark:text-yellow-300">
-          🪙 {userCoins}
-        </div>
-        <div className="bg-pink-100 dark:bg-pink-900/30 px-3 py-1 rounded-full text-sm font-bold text-pink-700 dark:text-pink-300">
-          🔄 {totalSpins}
-        </div>
+        <div className="bg-purple-100 dark:bg-purple-900/30 px-3 py-1 rounded-full text-sm font-bold text-purple-700 dark:text-purple-300">Lv. {userLevel}</div>
+        <div className="bg-blue-100 dark:bg-blue-900/30 px-3 py-1 rounded-full text-sm font-bold text-blue-700 dark:text-blue-300">{userXp} XP</div>
+        <div className="bg-yellow-100 dark:bg-yellow-900/30 px-3 py-1 rounded-full text-sm font-bold text-yellow-700 dark:text-yellow-300">🪙 {userCoins}</div>
+        <div className="bg-pink-100 dark:bg-pink-900/30 px-3 py-1 rounded-full text-sm font-bold text-pink-700 dark:text-pink-300">🔄 {totalSpins}</div>
       </div>
 
-      {/* Wheel */}
       <div className="relative w-60 h-60 mx-auto mb-4">
         <Pointer />
         <div
@@ -170,7 +152,6 @@ export default function SpinWheel() {
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 bg-white dark:bg-gray-700 rounded-full shadow-inner" />
       </div>
 
-      {/* Result */}
       {result && (
         <div className="bg-green-100 dark:bg-green-900/30 p-3 rounded-xl mb-4 animate-fade-in">
           <p className="text-2xl font-bold text-green-600">+{result} Coins!</p>
@@ -178,7 +159,6 @@ export default function SpinWheel() {
         </div>
       )}
 
-      {/* Spin button */}
       <button
         onClick={handleSpin}
         disabled={spinning || spinUsed}
