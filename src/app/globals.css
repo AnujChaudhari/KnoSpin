@@ -4,7 +4,18 @@
 
 @layer base {
   body {
-    @apply bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100;
+    @apply bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100 overflow-x-hidden;
+    -webkit-touch-callout: none; /* मोबाइल पर लॉन्ग-प्रेस कॉलआउट रोकें */
+  }
+  img {
+    @apply max-w-full h-auto;
+  }
+  table, pre {
+    @apply max-w-full overflow-x-auto block;
+  }
+  * {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
   }
 }
 
@@ -20,5 +31,22 @@
   }
   .input-field {
     @apply w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-transparent outline-none focus:ring-2 focus:ring-primary-400 dark:bg-gray-800 mb-3;
+  }
+  /* पूरी साइट पर डिफ़ॉल्ट selection रोकें */
+  body * {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+  /* जिन्हें allow करना है (प्रोडक्ट जानकारी, इनपुट, टेक्सटएरिया) */
+  .allow-select,
+  .allow-select *,
+  .product-detail *,
+  input, textarea {
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
   }
 }
