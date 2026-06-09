@@ -11,7 +11,7 @@ import Link from "next/link";
 
 /* ────── प्रीमियम SVG आइकॉन ────── */
 const GroupIcon = () => (
-  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+  <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
     <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87" /><path d="M16 3.13a4 4 0 010 7.75" />
   </svg>
 );
@@ -56,7 +56,6 @@ export default function GroupDetailPage() {
   const [isMember, setIsMember] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
 
-  // ✅ डेटा फ़ेच को useCallback में लपेटें ताकि हर बार ताज़ा डेटा मिले
   const fetchData = useCallback(async () => {
     if (!groupId) return;
     setLoading(true);
@@ -89,7 +88,6 @@ export default function GroupDetailPage() {
     setLoading(false);
   }, [groupId, user, router]);
 
-  // पहली बार लोड और जब भी यूज़र बदले, डेटा लाएँ
   useEffect(() => {
     fetchData();
   }, [fetchData]);
@@ -118,41 +116,67 @@ export default function GroupDetailPage() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
-      {/* Group Header Card – Pure Black Theme */}
       <div className="bg-[#0a0a0a] border border-gray-800 rounded-2xl p-6 mb-6">
         <div className="flex items-start gap-4">
-          <div className="w-14 h-14 rounded-xl bg-primary-600/20 flex items-center justify-center text-primary-400 flex-shrink-0">
-            <GroupIcon />
+          <div className="w-14 h-14 rounded-xl bg-primary-600/20 flex items-center justify-center text-primary-400 flex-shrink-0 overflow-hidden">
+            {group.iconUrl ? (
+              <img src={group.iconUrl} alt={group.name} className="w-full h-full object-cover" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }} />
+            ) : null}
+            <span className={`${group.iconUrl ? 'hidden' : 'flex'} w-full h-full items-center justify-center`}>
+              <GroupIcon />
+            </span>
           </div>
           <div className="flex-grow min-w-0">
             <h1 className="text-2xl font-bold text-white">{group.name}</h1>
-            {group.description && <p className="text-gray-400 text-sm mt-1">{group.description}</p>}
-            <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
+            {group.description && (
+              <div className="text-sm text-gray-300 mt-2 prose prose-sm dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: group.description }} />
+            )}
+            <div className="flex items-center gap-4 mt-3 text-sm text-gray-500">
               <span className="flex items-center gap-1"><MembersIcon /> {memberCount} members</span>
               <span>{group.privacy === 'private' ? 'Private' : 'Public'}</span>
             </div>
           </div>
-          <div className="flex gap-2">
-            {!isMember && (
-              <button onClick={handleJoin} className="bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold py-2 px-4 rounded-xl transition">Join Group</button>
-            )}
-            {isMember && (
-              <>
-                <button onClick={() => setShowInvite(!showInvite)} className="p-2 bg-gray-800 rounded-lg" title="Invite"><ShareIcon /></button>
-                <Link href={`/community/groups/${groupId}/post/create`} className="bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold py-2 px-4 rounded-xl flex items-center gap-1 transition"><PlusIcon /> Post</Link>
-              </>
-            )}
-          </div>
         </div>
+
+        {/* Mobile Optimized Action Buttons */}
+        {isMember && (
+          <div className="flex items-center gap-2 mt-6">
+            <button
+              onClick={() => setShowInvite(!showInvite)}
+              className="flex-1 flex justify-center items-center gap-1.5 px-3 py-2.5 bg-gray-800 hover:bg-gray-700 rounded-xl text-gray-200 text-xs sm:text-sm font-semibold transition active:scale-95"
+            >
+              <ShareIcon /> Share
+            </button>
+            <Link
+              href={`/community/groups/${groupId}/post/create`}
+              className="flex-1 flex justify-center items-center gap-1.5 px-3 py-2.5 bg-primary-600 hover:bg-primary-700 rounded-xl text-white text-xs sm:text-sm font-semibold transition active:scale-95"
+            >
+              <PlusIcon /> Post
+            </Link>
+            <button
+              onClick={() => toast.success("Call feature coming soon!")}
+              className="flex-1 flex justify-center items-center gap-1.5 px-3 py-2.5 bg-emerald-600 hover:bg-emerald-700 rounded-xl text-white text-xs sm:text-sm font-semibold transition active:scale-95"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.362 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.574 2.81.7A2 2 0 0122 16.92z" /></svg>
+              Call
+            </button>
+          </div>
+        )}
+
+        {!isMember && (
+          <button onClick={handleJoin} className="w-full mt-6 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold py-2.5 rounded-xl transition active:scale-95">
+            Join Group
+          </button>
+        )}
+
         {showInvite && (
           <div className="mt-4 p-3 bg-gray-800 rounded-xl flex items-center justify-between">
-            <code className="text-sm text-gray-300">{`https://quickshoppro.vercel.app/community/groups/join?invite=${group.inviteCode}`}</code>
+            <code className="text-sm text-gray-300">{`.../join?invite=${group.inviteCode}`}</code>
             <button onClick={copyInviteLink} className="bg-primary-600 text-white text-xs font-semibold py-1.5 px-3 rounded-lg ml-2 flex items-center gap-1"><CopyIcon /> Copy</button>
           </div>
         )}
       </div>
 
-      {/* Posts Feed */}
       {posts.length === 0 && <p className="text-center text-gray-500 py-12">No posts yet. Be the first to share!</p>}
       <div className="space-y-4">
         {posts.map(post => (
