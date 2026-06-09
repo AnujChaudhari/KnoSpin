@@ -7,6 +7,7 @@ import { db } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp, query, where, getDocs } from "firebase/firestore";
 import { uploadToCloudinary } from "@/lib/cloudinary";
 import { compressImage } from "@/lib/compressImage";
+import { useLocation } from "@/hooks/useLocation";
 import { toast } from "react-hot-toast";
 import Link from "next/link";
 
@@ -64,6 +65,8 @@ const MapPinIcon = () => (
 
 export default function StudentVerificationPage() {
   const { user } = useAuth();
+  const { states, districts, loading: locLoading, getDistricts } = useLocation();
+
   const [form, setForm] = useState({
     studentName: "",
     schoolCollegeName: "",
@@ -96,7 +99,14 @@ export default function StudentVerificationPage() {
   }, [user]);
 
   const handleChange = (e) => {
-    setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    const { name, value } = e.target;
+    setForm(prev => ({ ...prev, [name]: value }));
+
+    // जब स्टेट बदले तो डिस्ट्रिक्ट लोड करें
+    if (name === "state") {
+      getDistricts(value);
+      setForm(prev => ({ ...prev, city: "" })); // पुराना शहर हटाएँ
+    }
   };
 
   const handleFileChange = (e) => {
@@ -121,11 +131,8 @@ export default function StudentVerificationPage() {
 
     setSubmitting(true);
     try {
-      // Compress image
       const compressed = await compressImage(idCardFile, 1024, 500);
-      // Upload to Cloudinary
       const imageUrl = await uploadToCloudinary(compressed);
-      // Save verification request
       await addDoc(collection(db, "studentVerifications"), {
         userId: user.uid,
         ...form,
@@ -151,7 +158,7 @@ export default function StudentVerificationPage() {
     );
   }
 
-  if (checking) {
+  if (checking || locLoading) {
     return (
       <div className="flex justify-center items-center min-h-[50vh]">
         <div className="animate-spin w-10 h-10 border-4 border-primary-500 border-t-transparent rounded-full" />
@@ -217,29 +224,38 @@ export default function StudentVerificationPage() {
           />
         </div>
 
-        {/* City & State (2 col) */}
+        {/* State & City (Dropdowns) */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="text-sm flex items-center gap-1 mb-1"><MapPinIcon /> City</label>
-            <input
-              name="city"
-              value={form.city}
-              onChange={handleChange}
-              placeholder="e.g., New Delhi"
-              required
-              className="input-field"
-            />
-          </div>
-          <div>
             <label className="text-sm flex items-center gap-1 mb-1"><MapPinIcon /> State</label>
-            <input
+            <select
               name="state"
               value={form.state}
               onChange={handleChange}
-              placeholder="e.g., Delhi"
               required
               className="input-field"
-            />
+            >
+              <option value="">Select State</option>
+              {states.map(s => (
+                <option key={s.state} value={s.state}>{s.state}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-sm flex items-center gap-1 mb-1"><MapPinIcon /> City</label>
+            <select
+              name="city"
+              value={form.city}
+              onChange={handleChange}
+              required
+              className="input-field"
+              disabled={!form.state}
+            >
+              <option value="">Select City</option>
+              {districts.map(d => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
           </div>
         </div>
 
