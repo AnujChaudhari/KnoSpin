@@ -7,19 +7,81 @@ import { collection, getDocs } from "firebase/firestore";
 import { useAuth } from "@/context/AuthContext";
 import Link from "next/link";
 
-/* ────── Premium SVG Icons (कोई बदलाव नहीं) ────── */
-const GroupIcon = ({ className = "w-5 h-5" }) => ( /* ... */ );
-const MapPinIcon = ({ className = "w-4 h-4" }) => ( /* ... */ );
-const SearchIcon = ({ className = "w-5 h-5" }) => ( /* ... */ );
-const PlusIcon = ({ className = "w-5 h-5" }) => ( /* ... */ );
-const LockIcon = ({ className = "w-4 h-4" }) => ( /* ... */ );
-const GlobeIcon = ({ className = "w-4 h-4" }) => ( /* ... */ );
-const XIcon = ({ className = "w-4 h-4" }) => ( /* ... */ );
-const UsersIcon = ({ className = "w-4 h-4" }) => ( /* ... */ );
-const FilterIcon = ({ className = "w-5 h-5" }) => ( /* ... */ );
-const ChevronDownIcon = ({ className = "w-4 h-4" }) => ( /* ... */ );
+/* ────── Premium SVG Icons (complete) ────── */
+const GroupIcon = ({ className = "w-5 h-5" }) => (
+  <svg className={className} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+    <circle cx="9" cy="7" r="4" />
+    <path d="M23 21v-2a4 4 0 00-3-3.87" />
+    <path d="M16 3.13a4 4 0 010 7.75" />
+  </svg>
+);
 
-/* ────── Debounce Hook (JavaScript) ────── */
+const MapPinIcon = ({ className = "w-4 h-4" }) => (
+  <svg className={className} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
+    <circle cx="12" cy="10" r="3" />
+  </svg>
+);
+
+const SearchIcon = ({ className = "w-5 h-5" }) => (
+  <svg className={className} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true">
+    <circle cx="11" cy="11" r="8" />
+    <path d="M21 21l-4.35-4.35" />
+  </svg>
+);
+
+const PlusIcon = ({ className = "w-5 h-5" }) => (
+  <svg className={className} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true">
+    <line x1="12" y1="5" x2="12" y2="19" />
+    <line x1="5" y1="12" x2="19" y2="12" />
+  </svg>
+);
+
+const LockIcon = ({ className = "w-4 h-4" }) => (
+  <svg className={className} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true">
+    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+    <path d="M7 11V7a5 5 0 0110 0v4" />
+  </svg>
+);
+
+const GlobeIcon = ({ className = "w-4 h-4" }) => (
+  <svg className={className} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true">
+    <circle cx="12" cy="12" r="10" />
+    <ellipse cx="12" cy="12" rx="4" ry="10" />
+    <path d="M2 12h20" />
+  </svg>
+);
+
+const XIcon = ({ className = "w-4 h-4" }) => (
+  <svg className={className} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true">
+    <line x1="18" y1="6" x2="6" y2="18" />
+    <line x1="6" y1="6" x2="18" y2="18" />
+  </svg>
+);
+
+const UsersIcon = ({ className = "w-4 h-4" }) => (
+  <svg className={className} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+    <circle cx="8.5" cy="7" r="4" />
+    <path d="M20 8v6" />
+    <path d="M23 11h-6" />
+  </svg>
+);
+
+const FilterIcon = ({ className = "w-5 h-5" }) => (
+  <svg className={className} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true">
+    <polygon points="22 3 2 3 10 13 10 21 14 18 14 13 22 3" />
+  </svg>
+);
+
+const ChevronDownIcon = ({ className = "w-4 h-4" }) => (
+  <svg className={className} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true">
+    <polyline points="6 9 12 15 18 9" />
+  </svg>
+);
+
+/* ────── Debounce Hook ────── */
 function useDebounce(value, delay = 300) {
   const [debounced, setDebounced] = useState(value);
   useEffect(() => {
@@ -29,6 +91,7 @@ function useDebounce(value, delay = 300) {
   return debounced;
 }
 
+/* ────── Main Component ────── */
 export default function GroupsPage() {
   const { user } = useAuth();
   const [allGroups, setAllGroups] = useState([]);
@@ -44,7 +107,7 @@ export default function GroupsPage() {
   const debouncedSearch = useDebounce(search, 300);
   const isFilterApplied = cityFilter !== "" || stateFilter !== "" || privacyFilter !== "" || search !== "";
 
-  // Fetch groups (no member count reads – saves Firestore reads)
+  // Fetch groups
   useEffect(() => {
     const fetchGroups = async () => {
       try {
@@ -61,7 +124,7 @@ export default function GroupsPage() {
     fetchGroups();
   }, []);
 
-  // Filter & sort (client‑side)
+  // Filter & sort
   const filteredGroups = useMemo(() => {
     let result = [...allGroups];
     if (debouncedSearch) {
@@ -74,7 +137,6 @@ export default function GroupsPage() {
     if (stateFilter) result = result.filter(g => g.state === stateFilter);
     if (privacyFilter) result = result.filter(g => g.privacy === privacyFilter);
 
-    // Sort
     result.sort((a, b) => {
       switch (sortBy) {
         case "newest": return (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0);
@@ -91,7 +153,6 @@ export default function GroupsPage() {
     setSearch(""); setCityFilter(""); setStateFilter(""); setPrivacyFilter(""); setSortBy("newest");
   }, []);
 
-  // Extract cities/states from filtered groups (for dropdowns)
   const cities = useMemo(() => [...new Set(allGroups.map(g => g.city).filter(Boolean))].sort(), [allGroups]);
   const states = useMemo(() => [...new Set(allGroups.map(g => g.state).filter(Boolean))].sort(), [allGroups]);
 
