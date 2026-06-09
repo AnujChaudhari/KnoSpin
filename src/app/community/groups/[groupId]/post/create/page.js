@@ -1,7 +1,7 @@
 "use client";
 export const dynamic = 'force-dynamic';
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
@@ -10,7 +10,7 @@ import { compressImage } from "@/lib/compressImage";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "react-hot-toast";
 
-/* ────── इनलाइन SVG आइकॉन ────── */
+/* ────── प्रीमियम SVG आइकॉन ────── */
 const BoldIcon = () => (
   <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
     <path d="M6 4h8a4 4 0 014 4 4 4 0 01-4 4H6z" /><path d="M6 12h9a4 4 0 014 4 4 4 0 01-4 4H6z" />
@@ -46,8 +46,13 @@ const SendIcon = () => (
     <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
   </svg>
 );
+const TrashIcon = () => (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+    <polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+  </svg>
+);
 
-/* ────── YouTube Detection Helper ────── */
+/* ────── YouTube ID extractor ────── */
 const extractYouTubeId = (text) => {
   const patterns = [
     /(?:https?:\/\/)?(?:www\.)?youtube\.com\/watch\?v=([^&]+)/,
@@ -61,17 +66,44 @@ const extractYouTubeId = (text) => {
   return null;
 };
 
-/* ────── Content Moderation Helpers ────── */
-const containsBadWords = (text) => {
-  const badWords = ['gali1', 'gali2', 'mc', 'bc', 'chod', 'bhadwa'];
-  const lower = text.toLowerCase();
-  return badWords.some(word => lower.includes(word));
-};
-
-const containsMaliciousUrl = (text) => {
-  const urlPattern = /https?:\/\/[^\s]+/g;
-  const urls = text.match(urlPattern) || [];
-  return urls.some(url => !url.startsWith('https://') || url.includes('javascript:') || url.includes('data:'));
+/* ────── Sanitize HTML (remove unwanted styles, keep basic formatting) ────── */
+const sanitizeHTML = (html) => {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  // Allow only these tags
+  const allowedTags = ['B', 'I', 'U', 'STRONG', 'EM', 'BR', 'P', 'UL', 'OL', 'LI', 'A'];
+  const walk = (node) => {
+    if (node.nodeType === 1) { // element
+      if (!allowedTags.includes(node.tagName)) {
+        while (node.firstChild) {
+          node.parentNode.insertBefore(node.firstChild, node);
+        }
+        node.parentNode.removeChild(node);
+        return;
+      }
+      // Remove all attributes except href for A
+      if (node.tagName !== 'A') {
+        while (node.attributes.length > 0) {
+          node.removeAttribute(node.attributes[0].name);
+        }
+      } else {
+        // keep only href
+        const href = node.getAttribute('href');
+        while (node.attributes.length > 0) {
+          node.removeAttribute(node.attributes[0].name);
+        }
+        if (href) node.setAttribute('href', href);
+      }
+    }
+    // Recursively process child nodes
+    let child = node.firstChild;
+    while (child) {
+      const next = child.nextSibling;
+      walk(child);
+      child = next;
+    }
+  };
+  walk(doc.body);
+  return doc.body.innerHTML;
 };
 
 export default function CreatePostPage() {
@@ -81,93 +113,198 @@ export default function CreatePostPage() {
   const router = useRouter();
 
   const editorRef = useRef(null);
-  const [imageFile, setImageFile] = useState(null);
+  const [images, setImages] = useState([]);
   const [posting, setPosting] = useState(false);
 
+  // Handle paste to strip unwanted CSS
+  const handlePaste = (e) => {
+    e.preventDefault();
+    // Try to get plain text first, if not then HTML
+    const plainText = e.clipboardData.getData('text/plain');
+    if (plainText) {
+      // Convert plain text to HTML (respect line breaks)
+      const html = plainText.replace(/\n/g, '<br>');
+      document.execCommand('insertHTML', false, html);
+    } else {
+      const html = e.clipboardData.getData('text/html');
+      if (html) {
+        const clean = sanitizeHTML(html);
+        document.execCommand('insertHTML', false, clean);
+      }
+    }
+  };
+
+  // Toolbar handlers (works on selected text)
   const handleToolbar = (cmd, value = null) => {
     document.execCommand(cmd, false, value);
     editorRef.current?.focus();
   };
 
-  const handleEmojiPicker = () => {
+  // Emoji picker (simple native)
+  const handleEmoji = () => {
     const input = document.createElement('input');
     input.type = 'text';
     input.style.position = 'fixed';
-    input.style.opacity = 0;
-    input.addEventListener('input', (e) => {
-      document.execCommand('insertText', false, e.target.value);
-      input.remove();
-    });
+    input.style.opacity = '0';
     document.body.appendChild(input);
     input.focus();
     setTimeout(() => {
       if (input.value === '') {
         document.execCommand('insertText', false, '😊');
-        input.remove();
+      } else {
+        document.execCommand('insertText', false, input.value);
       }
+      input.remove();
     }, 500);
   };
 
+  // Image handling
+  const handleImageChange = (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length + images.length > 6) {
+      toast.error("You can upload up to 6 images.");
+      return;
+    }
+    const newImages = files.map(file => ({
+      file,
+      preview: URL.createObjectURL(file),
+    }));
+    setImages(prev => [...prev, ...newImages]);
+  };
+
+  const removeImage = (index) => {
+    setImages(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = async () => {
-    if (!user) { toast.error("Please login"); return; }
+    if (!user) {
+      toast.error("Please login");
+      return;
+    }
     const htmlContent = editorRef.current?.innerHTML;
     if (!htmlContent || htmlContent === '<br>' || htmlContent === '<p><br></p>') {
       toast.error("Please write something");
       return;
     }
-    if (containsBadWords(htmlContent)) {
-      toast.error("Post contains inappropriate language. Please remove it.");
-      return;
-    }
-    if (containsMaliciousUrl(htmlContent)) {
-      toast.error("Post contains suspicious URLs. Please remove them.");
-      return;
-    }
     setPosting(true);
     try {
-      let imageUrl = "";
-      if (imageFile) {
-        const compressed = await compressImage(imageFile, 1024, 200);
-        imageUrl = await uploadToCloudinary(compressed);
+      toast.loading("Uploading images...");
+      const imageUrls = [];
+      for (const img of images) {
+        const compressed = await compressImage(img.file, 1024, 200);
+        const url = await uploadToCloudinary(compressed);
+        imageUrls.push(url);
       }
+      toast.dismiss();
+
       const videoId = extractYouTubeId(htmlContent);
       const authorName = user.email?.split('@')[0] || "Student";
+
       await addDoc(collection(db, "posts"), {
         groupId,
         authorId: user.uid,
         authorName,
         text: htmlContent,
-        imageUrl,
+        imageUrl: imageUrls.length > 0 ? imageUrls[0] : "",
+        imageUrls,
         videoId,
         createdAt: serverTimestamp(),
         isDeleted: false,
       });
       toast.success("Post published!");
       router.push(`/community/groups/${groupId}`);
-    } catch (err) { console.error(err); toast.error("Failed to publish"); }
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to publish");
+    }
     setPosting(false);
   };
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold mb-4">Create Post ✍️</h1>
+    <div className="max-w-2xl mx-auto px-4 py-6 flex flex-col min-h-[100dvh]">
+      <h1 className="text-2xl font-bold text-white mb-4">Create Post ✍️</h1>
+
+      {/* Toolbar */}
       <div className="flex gap-1 mb-3 flex-wrap">
-        <button onClick={() => handleToolbar('bold')} className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700"><BoldIcon /></button>
-        <button onClick={() => handleToolbar('italic')} className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700"><ItalicIcon /></button>
-        <button onClick={() => handleToolbar('underline')} className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700"><UnderlineIcon /></button>
-        <button onClick={() => handleToolbar('insertUnorderedList')} className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700"><ListIcon /></button>
-        <button onClick={handleEmojiPicker} className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700"><EmojiIcon /></button>
+        {[
+          { cmd: 'bold', icon: <BoldIcon /> },
+          { cmd: 'italic', icon: <ItalicIcon /> },
+          { cmd: 'underline', icon: <UnderlineIcon /> },
+          { cmd: 'insertUnorderedList', icon: <ListIcon /> },
+        ].map(btn => (
+          <button
+            key={btn.cmd}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              handleToolbar(btn.cmd);
+            }}
+            className="p-2 rounded-lg bg-[#0a0a0a] border border-gray-800 text-gray-300 hover:bg-gray-800 transition"
+          >
+            {btn.icon}
+          </button>
+        ))}
+        <button onClick={handleEmoji} className="p-2 rounded-lg bg-[#0a0a0a] border border-gray-800 text-gray-300 hover:bg-gray-800 transition">
+          <EmojiIcon />
+        </button>
       </div>
-      <div ref={editorRef} contentEditable className="card min-h-[200px] p-4 outline-none text-sm" style={{ whiteSpace: 'pre-wrap' }} data-placeholder="Write something awesome..." />
-      <div className="mt-4">
-        <label className="text-sm flex items-center gap-1 mb-1"><ImageIcon /> Attach Image (optional)</label>
-        <input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files[0])} className="input-field" />
-        {imageFile && <p className="text-xs text-green-600 mt-1">Image selected: {imageFile.name}</p>}
+
+      {/* Editor with paste handler */}
+      <div className="flex-1 flex flex-col min-h-0">
+        <div
+          ref={editorRef}
+          contentEditable
+          onPaste={handlePaste}
+          className="bg-[#0a0a0a] border border-gray-800 rounded-2xl p-4 flex-1 overflow-y-auto outline-none text-gray-300 text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent transition"
+          style={{ whiteSpace: 'pre-wrap', minHeight: '200px' }}
+          data-placeholder="Write something awesome..."
+        />
+
+        {/* Image Upload Section */}
+        <div className="mt-4 flex-shrink-0">
+          <label className="text-sm flex items-center gap-1 mb-1 text-gray-400">
+            <ImageIcon /> Attach Images ({images.length}/6)
+          </label>
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handleImageChange}
+            className="bg-[#0a0a0a] border border-gray-800 text-white rounded-xl py-2 px-3 w-full outline-none focus:ring-1 focus:ring-primary-500"
+            disabled={images.length >= 6}
+          />
+          {images.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-2">
+              {images.map((img, idx) => (
+                <div key={idx} className="relative w-16 h-16 rounded-lg overflow-hidden border border-gray-800">
+                  <img src={img.preview} alt={`Preview ${idx+1}`} className="w-full h-full object-cover" />
+                  <button
+                    onClick={() => removeImage(idx)}
+                    className="absolute top-0 right-0 p-0.5 bg-black/60 rounded-bl-lg"
+                  >
+                    <TrashIcon />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
-      <button onClick={handleSubmit} disabled={posting} className="btn-gradient w-full mt-6 flex items-center justify-center gap-2">
-        {posting ? <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" /> : <SendIcon />}
-        {posting ? "Publishing..." : "Post"}
-      </button>
+
+      {/* Sticky Submit Button */}
+      <div className="sticky bottom-0 bg-black/90 backdrop-blur-sm py-3 -mx-4 px-4 border-t border-gray-800 mt-4">
+        <button
+          onClick={handleSubmit}
+          disabled={posting}
+          className="w-full bg-primary-600 hover:bg-primary-700 text-white font-semibold py-3 rounded-xl flex items-center justify-center gap-2 transition active:scale-95 disabled:opacity-50"
+        >
+          {posting ? (
+            <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
+          ) : (
+            <SendIcon />
+          )}
+          {posting ? "Publishing..." : "Post"}
+        </button>
+      </div>
     </div>
   );
 }
