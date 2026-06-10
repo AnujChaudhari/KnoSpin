@@ -5,8 +5,8 @@ import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
 import {
-  doc, getDoc, collection, getDocs, addDoc,
-  updateDoc, deleteDoc, serverTimestamp
+  doc, collection, addDoc, updateDoc, deleteDoc, serverTimestamp,
+  onSnapshot, query, where // 👈 New Real-time & Query imports
 } from "firebase/firestore";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "react-hot-toast";
@@ -47,7 +47,6 @@ const YouTubeEmbed = ({ videoId }) => (
 
 /* ────────────── kMeet CALL MODAL ────────────── */
 const KMeetModal = ({ groupId, onClose }) => {
-  // kMeet uses standard URL paths. We clean the groupId to make a valid room name
   const roomName = `QuickShop_${groupId.replace(/[^a-zA-Z0-9]/g, "_")}`;
   return (
     <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center sm:p-6 animate-in fade-in duration-200">
@@ -108,41 +107,53 @@ export default function GroupDetailPage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // ===== NEW REAL-TIME FETCHING LOGIC (Offline-First) =====
   useEffect(() => {
     if (!groupId) return;
 
-    const fetchData = async () => {
-      try {
-        const groupSnap = await getDoc(doc(db, "groups", groupId));
-        if (!groupSnap.exists()) {
-          toast.error("Group not found");
-          router.push("/community/groups");
-          return;
-        }
-        const groupData = { id: groupSnap.id, ...groupSnap.data() };
-        setGroup(groupData);
-        setEditName(groupData.name || "");
+    setLoading(true);
 
-        const membersSnap = await getDocs(collection(db, "groups", groupId, "members"));
-        setMemberCount(membersSnap.size);
-        if (user) {
-          const already = membersSnap.docs.some((d) => d.data().userId === user.uid);
-          setIsMember(already);
-        }
-
-        const postsSnap = await getDocs(collection(db, "posts"));
-        const allPosts = postsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
-        const groupPosts = allPosts.filter((p) => p.groupId === groupId && !p.isDeleted);
-        groupPosts.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
-        setPosts(groupPosts);
-      } catch (err) {
-        console.error(err);
-        toast.error("Failed to load group");
-      } finally {
-        setLoading(false);
+    // 1. Group Data Listener
+    const unsubGroup = onSnapshot(doc(db, "groups", groupId), (docSnap) => {
+      if (!docSnap.exists()) {
+        toast.error("Group not found");
+        router.push("/community/groups");
+        return;
       }
+      const groupData = { id: docSnap.id, ...docSnap.data() };
+      setGroup(groupData);
+      setEditName(groupData.name || "");
+      setLoading(false); // Stop loading immediately when cache hits
+    }, (error) => {
+      console.error("Group fetch error:", error);
+      setLoading(false);
+    });
+
+    // 2. Members Listener
+    const unsubMembers = onSnapshot(collection(db, "groups", groupId, "members"), (snap) => {
+      setMemberCount(snap.size);
+      if (user) {
+        const already = snap.docs.some((d) => d.data().userId === user.uid);
+        setIsMember(already);
+      }
+    }, (error) => console.error("Members error:", error));
+
+    // 3. Posts Listener (Optimized query)
+    const postsQuery = query(collection(db, "posts"), where("groupId", "==", groupId));
+    const unsubPosts = onSnapshot(postsQuery, (snap) => {
+      const groupPosts = snap.docs
+        .map((d) => ({ id: d.id, ...d.data() }))
+        .filter(p => !p.isDeleted);
+      
+      groupPosts.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
+      setPosts(groupPosts);
+    }, (error) => console.error("Posts error:", error));
+
+    return () => {
+      unsubGroup();
+      unsubMembers();
+      unsubPosts();
     };
-    fetchData();
   }, [groupId, user, router]);
 
   const handleJoin = async () => {
@@ -162,7 +173,7 @@ export default function GroupDetailPage() {
   };
 
   const copyInviteLink = () => {
-    const link = `https://quickshoppro.vercel.app/community/groups/join?invite=${group.inviteCode}`;
+    const link = `https://quickshoppro.vercel.app/community/groups/join?invite=${group?.inviteCode}`;
     navigator.clipboard.writeText(link);
     toast.success("Invite link copied to clipboard!");
   };
@@ -259,19 +270,31 @@ export default function GroupDetailPage() {
     }
   };
 
+  // ===== NEW ERROR/LOADING UI =====
   if (loading) return (
     <div className="flex justify-center items-center min-h-[60vh]">
       <div className="animate-spin w-8 h-8 border-3 border-primary-500 border-t-transparent rounded-full" />
     </div>
   );
-  if (!group) return null;
+
+  if (!group) return (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+      <div className="w-16 h-16 bg-red-50 dark:bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mb-4">
+        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+      </div>
+      <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Could not load group</h2>
+      <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-sm">Please check your internet connection. Firebase is having trouble connecting to the server.</p>
+      <button onClick={() => window.location.reload()} className="px-6 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-semibold shadow-sm active:scale-95 transition-all">
+        Reload Page
+      </button>
+    </div>
+  );
 
   return (
     <div className="max-w-3xl mx-auto px-3 sm:px-4 py-6 md:py-8 min-h-screen">
       
       {/* ===== PREMIUM GROUP CARD ===== */}
       <div className="bg-white dark:bg-[#111] rounded-3xl shadow-sm border border-gray-100 dark:border-white/5 mb-6 overflow-hidden relative">
-        {/* Subtle top gradient banner */}
         <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-primary-500/10 to-transparent dark:from-primary-500/5 opacity-50 pointer-events-none" />
         
         <div className="p-5 sm:p-7 relative z-10">
@@ -342,20 +365,20 @@ export default function GroupDetailPage() {
             <div className="flex items-center gap-2 mt-6 overflow-x-auto no-scrollbar pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               <button
                 onClick={() => setShowInvite(!showInvite)}
-                className="flex-1 min-w-[100px] flex justify-center items-center gap-2 px-4 py-2.5 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 rounded-xl text-gray-800 dark:text-gray-200 text-sm font-semibold transition-all active:scale-95 whitespace-nowrap"
+                className="flex-1 min-w-[100px] flex justify-center items-center gap-1.5 px-3 py-2.5 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 rounded-xl text-gray-800 dark:text-gray-200 text-xs font-semibold transition-all active:scale-95 truncate"
               >
                 <ShareIcon /> Share
               </button>
               <Link
                 href={`/community/groups/${groupId}/post/create`}
-                className="flex-1 min-w-[100px] flex justify-center items-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 shadow-sm shadow-primary-500/30 rounded-xl text-white text-sm font-semibold transition-all active:scale-95 whitespace-nowrap"
+                className="flex-1 min-w-[100px] flex justify-center items-center gap-1.5 px-3 py-2.5 bg-primary-600 hover:bg-primary-700 shadow-sm shadow-primary-500/30 rounded-xl text-white text-xs font-semibold transition-all active:scale-95 truncate"
               >
                 <PlusIcon /> Post
               </Link>
               <button
                 onClick={startCall}
                 disabled={sendingNotification}
-                className="flex-1 min-w-[100px] flex justify-center items-center gap-2 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 shadow-sm shadow-emerald-500/30 rounded-xl text-white text-sm font-semibold transition-all active:scale-95 disabled:opacity-70 whitespace-nowrap"
+                className="flex-1 min-w-[100px] flex justify-center items-center gap-1.5 px-3 py-2.5 bg-emerald-500 hover:bg-emerald-600 shadow-sm shadow-emerald-500/30 rounded-xl text-white text-xs font-semibold transition-all active:scale-95 disabled:opacity-70 truncate"
               >
                 <VideoIcon /> {sendingNotification ? "..." : "Call"}
               </button>
