@@ -95,7 +95,6 @@ export default function GroupDetailPage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Optimized Architecture: Light queries & Server Side Count
   useEffect(() => {
     if (!groupId) return;
 
@@ -104,7 +103,6 @@ export default function GroupDetailPage() {
         const postsQuery = query(collection(db, "posts"), where("groupId", "==", groupId));
         const countQuery = getCountFromServer(collection(db, "groups", groupId, "members"));
         
-        // Pure Targeted User Check (No massive downloads)
         const userCheckQuery = user 
           ? query(collection(db, "groups", groupId, "members"), where("userId", "==", user.uid), limit(1))
           : null;
@@ -126,7 +124,6 @@ export default function GroupDetailPage() {
         setGroup(groupData);
         setEditName(groupData.name || "");
 
-        // Set efficient server count
         setMemberCount(countSnap.data().count);
         
         if (user && userCheckSnap) {
@@ -251,7 +248,7 @@ export default function GroupDetailPage() {
       if (promises.length > 0) toast.success(`Notified ${promises.length} members`);
     } catch (err) {
       console.error(err);
-    } fill (sendingNotification) {
+    } finally {
       setSendingNotification(false);
       setShowCall(true);
     }
