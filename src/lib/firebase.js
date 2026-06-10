@@ -1,6 +1,6 @@
 import { initializeApp, getApps } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
-import { initializeFirestore } from "firebase/firestore";
+import { initializeFirestore } from "firebase/firestore";   // <-- import change
 import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
@@ -22,9 +22,9 @@ if (!getApps().length) {
 const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
 
-// 🔥 Long polling enabled to fix Firestore "client is offline" errors
+// ✅ Long polling enabled – fixes "client is offline" / connection drops
 const db = initializeFirestore(app, {
-  experimentalAutoDetectLongPolling: true,
+  experimentalForceLongPolling: true,
 });
 
 const storage = getStorage(app);
