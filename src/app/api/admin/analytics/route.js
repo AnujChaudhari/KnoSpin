@@ -4,41 +4,52 @@ import { collection, getDocs } from "firebase/firestore";
 
 export async function GET() {
   try {
-    const ordersSnap = await getDocs(collection(db, "orders"));
+    // सभी कलेक्शन एक साथ fetch करें (समानांतर)
+    const [
+      ordersSnap, productsSnap, usersSnap, categoriesSnap,
+      referralsSnap, coursesSnap, enrollmentsSnap,
+      walletSnap, groupsSnap, postsSnap
+    ] = await Promise.all([
+      getDocs(collection(db, "orders")),
+      getDocs(collection(db, "products")),
+      getDocs(collection(db, "users")),
+      getDocs(collection(db, "categories")),
+      getDocs(collection(db, "referrals")),
+      getDocs(collection(db, "courses")),
+      getDocs(collection(db, "enrollments")),
+      getDocs(collection(db, "wallet_transactions")),
+      getDocs(collection(db, "groups")),
+      getDocs(collection(db, "posts")),
+    ]);
+
+    // Raw arrays
     const orders = ordersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-    const productsSnap = await getDocs(collection(db, "products"));
     const products = productsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-    const usersSnap = await getDocs(collection(db, "users"));
     const users = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-    const categoriesSnap = await getDocs(collection(db, "categories"));
-    const categories = categoriesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-    const referralsSnap = await getDocs(collection(db, "referrals"));
     const referrals = referralsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const courses = coursesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const enrollments = enrollmentsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const walletTxns = walletSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-    // Calculate revenue etc. (same as before, but ensure no undefined)
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    // ====== गणनाएँ ======
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
+    // Revenue
     const totalRevenue = orders
       .filter(o => o.status === "delivered" || o.paymentStatus === "paid")
       .reduce((sum, o) => sum + (o.total || 0), 0);
-
     const todayRevenue = orders
       .filter(o => {
-        const createdAt = o.createdAt?.toDate?.() || new Date(o.createdAt);
-        return createdAt >= today && (o.status === "delivered" || o.paymentStatus === "paid");
+        const d = o.createdAt?.toDate?.() || new Date(o.createdAt);
+        return d >= today && (o.status === "delivered" || o.paymentStatus === "paid");
       })
       .reduce((sum, o) => sum + (o.total || 0), 0);
-
     const monthRevenue = orders
       .filter(o => {
-        const createdAt = o.createdAt?.toDate?.() || new Date(o.createdAt);
-        return createdAt >= startOfMonth && (o.status === "delivered" || o.paymentStatus === "paid");
+        const d = o.createdAt?.toDate?.() || new Date(o.createdAt);
+        return d >= startOfMonth && (o.status === "delivered" || o.paymentStatus === "paid");
       })
       .reduce((sum, o) => sum + (o.total || 0), 0);
 
@@ -51,27 +62,25 @@ export async function GET() {
       color: { pending: "#fbbf24", confirmed: "#3b82f6", shipped: "#8b5cf6", delivered: "#10b981", cancelled: "#ef4444" }[name]
     }));
 
-    // Daily sales last 7 days (simplified)
+    // Daily Sales (last 7 days)
     const dailySales = [];
     for (let i = 6; i >= 0; i--) {
-      const date = new Date(today);
-      date.setDate(date.getDate() - i);
-      const dayStart = new Date(date);
-      dayStart.setHours(0,0,0,0);
-      const dayEnd = new Date(date);
-      dayEnd.setHours(23,59,59,999);
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const start = new Date(d); start.setHours(0,0,0,0);
+      const end = new Date(d); end.setHours(23,59,59,999);
       const dayOrders = orders.filter(o => {
-        const createdAt = o.createdAt?.toDate?.() || new Date(o.createdAt);
-        return createdAt >= dayStart && createdAt <= dayEnd;
+        const created = o.createdAt?.toDate?.() || new Date(o.createdAt);
+        return created >= start && created <= end;
       });
       dailySales.push({
-        date: date.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric' }),
+        date: d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric' }),
         orders: dayOrders.length,
         revenue: dayOrders.reduce((s, o) => s + (o.total || 0), 0)
       });
     }
 
-    // Top products
+    // Top Products
     const productSales = {};
     orders.forEach(o => {
       o.items?.forEach(item => {
@@ -82,7 +91,7 @@ export async function GET() {
     });
     const topProducts = Object.values(productSales).sort((a,b) => b.revenue - a.revenue).slice(0,5);
 
-    // Top referrers
+    // Top Referrers
     const topReferrers = users
       .filter(u => (u.totalReferrals || 0) > 0)
       .sort((a,b) => (b.totalReferrals || 0) - (a.totalReferrals || 0))
@@ -94,10 +103,10 @@ export async function GET() {
         tier: u.referralTier || "bronze"
       }));
 
-    // Category distribution
+    // Category distribution (products)
     const catCount = {};
     products.forEach(p => {
-      const cat = categories.find(c => c.id === p.category)?.name || "Uncategorized";
+      const cat = categoriesSnap.docs.find(c => c.id === p.category)?.data()?.name || "Uncategorized";
       catCount[cat] = (catCount[cat] || 0) + 1;
     });
     const categoryData = Object.entries(catCount).map(([name, value]) => ({ name, value }));
@@ -107,10 +116,33 @@ export async function GET() {
     const completedReferrals = referrals.filter(r => r.status === "completed").length;
     const pendingReferrals = referrals.filter(r => r.status === "pending").length;
 
+    // New: Courses & Enrollments
+    const totalCourses = courses.length;
+    const publishedCourses = courses.filter(c => c.isPublished).length;
+    const totalEnrollments = enrollments.length;
+    const dailyEnrollments = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const start = new Date(d); start.setHours(0,0,0,0);
+      const end = new Date(d); end.setHours(23,59,59,999);
+      const count = enrollments.filter(e => {
+        const created = e.enrolledAt?.toDate?.() || new Date(e.enrolledAt);
+        return created >= start && created <= end;
+      }).length;
+      dailyEnrollments.push({ date: d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric' }), count });
+    }
+
+    // Wallet summary
+    const totalWalletAmount = walletTxns.reduce((sum, tx) => sum + (tx.amount || 0), 0);
+    const totalCoinsGiven = walletTxns.reduce((sum, tx) => sum + (tx.coins || 0), 0);
+
+    // Groups & Posts
+    const totalGroups = groupsSnap.size;
+    const totalPosts = postsSnap.size;
+
     return NextResponse.json({
-      totalRevenue,
-      todayRevenue,
-      monthRevenue,
+      totalRevenue, todayRevenue, monthRevenue,
       totalOrders: orders.length,
       pendingOrders: statusCounts.pending,
       confirmedOrders: statusCounts.confirmed,
@@ -119,15 +151,13 @@ export async function GET() {
       cancelledOrders: statusCounts.cancelled,
       totalProducts: products.length,
       totalUsers: users.length,
-      totalCategories: categories.length,
-      totalReferrals,
-      completedReferrals,
-      pendingReferrals,
-      orderStatusData,
-      dailySales,
-      topProducts,
-      topReferrers,
-      categoryData,
+      totalCategories: categoriesSnap.size,
+      totalReferrals, completedReferrals, pendingReferrals,
+      orderStatusData, dailySales, topProducts, topReferrers, categoryData,
+      // New fields
+      totalCourses, publishedCourses, totalEnrollments, dailyEnrollments,
+      totalWalletAmount, totalCoinsGiven,
+      totalGroups, totalPosts,
     });
   } catch (error) {
     console.error("Analytics API Error:", error);
