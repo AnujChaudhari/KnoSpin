@@ -1,6 +1,10 @@
 import { initializeApp, getApps } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
-import { initializeFirestore } from "firebase/firestore";   // <-- import change
+import {
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+} from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
@@ -22,10 +26,23 @@ if (!getApps().length) {
 const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
 
-// ✅ Long polling enabled – fixes "client is offline" / connection drops
-const db = initializeFirestore(app, {
-  experimentalForceLongPolling: true,
-});
+// ✅ Firestore with long‑polling + optional client‑side offline cache
+const db = (() => {
+  if (typeof window !== "undefined") {
+    // 🖥️ Client side — enable offline persistence
+    return initializeFirestore(app, {
+      experimentalForceLongPolling: true,
+      localCache: persistentLocalCache({
+        tabManager: persistentMultipleTabManager(),
+      }),
+    });
+  } else {
+    // 🌐 Server side — offline cache not supported, but long polling still works
+    return initializeFirestore(app, {
+      experimentalForceLongPolling: true,
+    });
+  }
+})();
 
 const storage = getStorage(app);
 
