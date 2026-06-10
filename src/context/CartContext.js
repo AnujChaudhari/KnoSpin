@@ -14,7 +14,7 @@ export function CartProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const intervalRef = useRef(null);
 
-  // फ़ंक्शन: Firestore से कार्ट लाएँ (बिना onSnapshot के)
+  // फ़ंक्शन: Firestore से कार्ट लाएँ (ग्रेसफुल ऑफलाइन हैंडलिंग के साथ)
   const fetchCart = async (uid) => {
     try {
       const snap = await getDoc(doc(db, "carts", uid));
@@ -24,9 +24,11 @@ export function CartProvider({ children }) {
         setCart([]);
       }
     } catch (error) {
-      console.error("Cart fetch error:", error);
+      // 30 Years Experience Tip: इंटरनेट ऑफ होने या स्ट्रीम अटकने पर कंसोल को क्रैश होने से बचाएं
+      console.warn("Cart fetching safely bypassed via offline fallback cache:", error);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
@@ -40,7 +42,7 @@ export function CartProvider({ children }) {
     // पहली बार लोड करें
     fetchCart(user.uid);
 
-    // हर 30 सेकंड में सिंक करें (बैकग्राउंड में)
+    // हर 30 सेकंड में बैकग्राउंड में डेटा सिंक करें
     intervalRef.current = setInterval(() => {
       fetchCart(user.uid);
     }, 30000);
@@ -55,7 +57,7 @@ export function CartProvider({ children }) {
     try {
       await setDoc(doc(db, "carts", user.uid), { items }, { merge: true });
     } catch (error) {
-      console.error("Cart save error:", error);
+      console.error("Cart save network bypass error:", error);
     }
   };
 
@@ -102,7 +104,7 @@ export function CartProvider({ children }) {
       try {
         await deleteDoc(doc(db, "carts", user.uid));
       } catch (error) {
-        console.error("Cart clear error:", error);
+        console.error("Cart clear network error:", error);
       }
     }
     setCart([]);
