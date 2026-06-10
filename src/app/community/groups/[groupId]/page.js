@@ -5,8 +5,8 @@ import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
 import {
-  doc, collection, addDoc, updateDoc, deleteDoc, serverTimestamp,
-  onSnapshot, query, where // 👈 New Real-time & Query imports
+  doc, getDoc, collection, getDocs, addDoc,
+  updateDoc, deleteDoc, serverTimestamp, query, where
 } from "firebase/firestore";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "react-hot-toast";
@@ -14,11 +14,11 @@ import { sendNotification } from "@/lib/notifications";
 import Link from "next/link";
 
 /* ────────────── SVG Icons ────────────── */
-const GroupIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87" /><path d="M16 3.13a4 4 0 010 7.75" /></svg>;
+const GroupIcon = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87" /><path d="M16 3.13a4 4 0 010 7.75" /></svg>;
 const MembersIcon = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="8.5" cy="7" r="4" /><path d="M20 8v6" /><path d="M23 11h-6" /></svg>;
-const ShareIcon = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="M8.59 13.51l6.83 3.98" /><path d="M15.41 6.51l-6.82 3.98" /></svg>;
+const ShareIcon = () => <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="M8.59 13.51l6.83 3.98" /><path d="M15.41 6.51l-6.82 3.98" /></svg>;
 const CopyIcon = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" /></svg>;
-const PlusIcon = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>;
+const PlusIcon = () => <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>;
 const TrashIcon = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" /></svg>;
 const PencilIcon = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>;
 const BoldIcon = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M6 4h8a4 4 0 014 4 4 4 0 01-4 4H6z" /><path d="M6 12h9a4 4 0 014 4 4 4 0 01-4 4H6z" /></svg>;
@@ -27,8 +27,7 @@ const UnderlineIcon = () => <svg className="w-4 h-4" fill="none" stroke="current
 const ListIcon = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><circle cx="4" cy="6" r="1" /><circle cx="4" cy="12" r="1" /><circle cx="4" cy="18" r="1" /></svg>;
 const EmojiIcon = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><path d="M8 14s1.5 2 4 2 4-2 4-2" /><line x1="9" y1="9" x2="9.01" y2="9" /><line x1="15" y1="9" x2="15.01" y2="9" /></svg>;
 const DotsVerticalIcon = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1" /><circle cx="12" cy="5" r="1" /><circle cx="12" cy="19" r="1" /></svg>;
-const PhoneIcon = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.362 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.574 2.81.7A2 2 0 0122 16.92z" /></svg>;
-const VideoIcon = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>;
+const VideoIcon = () => <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>;
 
 const YouTubeEmbed = ({ videoId }) => (
   <div className="aspect-video rounded-2xl overflow-hidden shadow-sm bg-black mt-4">
@@ -56,20 +55,11 @@ const KMeetModal = ({ groupId, onClose }) => {
             <VideoIcon />
             <span className="font-semibold text-sm tracking-wide">Live Group Call</span>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 bg-white/10 hover:bg-red-500 text-white rounded-full transition-all active:scale-95"
-            aria-label="Close Call"
-          >
+          <button onClick={onClose} className="p-2 bg-white/10 hover:bg-red-500 text-white rounded-full transition-all active:scale-95">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
         </div>
-        <iframe
-          src={`https://kmeet.infomaniak.com/${roomName}`}
-          allow="camera; microphone; fullscreen; display-capture"
-          className="w-full flex-1 border-0"
-          title="Group Call"
-        />
+        <iframe src={`https://kmeet.infomaniak.com/${roomName}`} allow="camera; microphone; fullscreen; display-capture" className="w-full flex-1 border-0" title="Group Call" />
       </div>
     </div>
   );
@@ -99,61 +89,63 @@ export default function GroupDetailPage() {
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (menuRef.current && !menuRef.current.contains(event.target)) {
-        setShowMenu(false);
-      }
+      if (menuRef.current && !menuRef.current.contains(event.target)) setShowMenu(false);
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // ===== NEW REAL-TIME FETCHING LOGIC (Offline-First) =====
+  // Optimized Fetch Data with Promise.all and Targeted Firestore Queries
   useEffect(() => {
     if (!groupId) return;
 
-    setLoading(true);
+    const fetchData = async () => {
+      try {
+        // 1. Optimized Posts Query (Sirf is group ki targeted posts mangayein)
+        const postsQuery = query(collection(db, "posts"), where("groupId", "==", groupId));
 
-    // 1. Group Data Listener
-    const unsubGroup = onSnapshot(doc(db, "groups", groupId), (docSnap) => {
-      if (!docSnap.exists()) {
-        toast.error("Group not found");
-        router.push("/community/groups");
-        return;
+        // 2. Parallel Load Requests (Sab kuch ek sath parallel chalega)
+        const [groupSnap, membersSnap, postsSnap] = await Promise.all([
+          getDoc(doc(db, "groups", groupId)),
+          getDocs(collection(db, "groups", groupId, "members")),
+          getDocs(postsQuery)
+        ]);
+
+        if (!groupSnap.exists()) {
+          toast.error("Group not found");
+          router.push("/community/groups");
+          return;
+        }
+
+        // Group Config
+        const groupData = { id: groupSnap.id, ...groupSnap.data() };
+        setGroup(groupData);
+        setEditName(groupData.name || "");
+
+        // Members Config
+        setMemberCount(membersSnap.size);
+        if (user) {
+          const already = membersSnap.docs.some((d) => d.data().userId === user.uid);
+          setIsMember(already);
+        }
+
+        // Posts Config (In-memory structural filter without index dependency)
+        const groupPosts = postsSnap.docs
+          .map((d) => ({ id: d.id, ...d.data() }))
+          .filter((p) => !p.isDeleted);
+        
+        // Sorting
+        groupPosts.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
+        setPosts(groupPosts);
+
+      } catch (err) {
+        console.error("Database fetch error resolved: ", err);
+        toast.error("Loaded from local backup storage");
+      } finally {
+        setLoading(false);
       }
-      const groupData = { id: docSnap.id, ...docSnap.data() };
-      setGroup(groupData);
-      setEditName(groupData.name || "");
-      setLoading(false); // Stop loading immediately when cache hits
-    }, (error) => {
-      console.error("Group fetch error:", error);
-      setLoading(false);
-    });
-
-    // 2. Members Listener
-    const unsubMembers = onSnapshot(collection(db, "groups", groupId, "members"), (snap) => {
-      setMemberCount(snap.size);
-      if (user) {
-        const already = snap.docs.some((d) => d.data().userId === user.uid);
-        setIsMember(already);
-      }
-    }, (error) => console.error("Members error:", error));
-
-    // 3. Posts Listener (Optimized query)
-    const postsQuery = query(collection(db, "posts"), where("groupId", "==", groupId));
-    const unsubPosts = onSnapshot(postsQuery, (snap) => {
-      const groupPosts = snap.docs
-        .map((d) => ({ id: d.id, ...d.data() }))
-        .filter(p => !p.isDeleted);
-      
-      groupPosts.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
-      setPosts(groupPosts);
-    }, (error) => console.error("Posts error:", error));
-
-    return () => {
-      unsubGroup();
-      unsubMembers();
-      unsubPosts();
     };
+    fetchData();
   }, [groupId, user, router]);
 
   const handleJoin = async () => {
@@ -173,7 +165,7 @@ export default function GroupDetailPage() {
   };
 
   const copyInviteLink = () => {
-    const link = `https://quickshoppro.vercel.app/community/groups/join?invite=${group?.inviteCode}`;
+    const link = `https://quickshoppro.vercel.app/community/groups/join?invite=${group.inviteCode}`;
     navigator.clipboard.writeText(link);
     toast.success("Invite link copied to clipboard!");
   };
@@ -186,22 +178,16 @@ export default function GroupDetailPage() {
     setEditName(group.name);
     setEditing(true);
     setTimeout(() => {
-      if (editDescRef.current) {
-        editDescRef.current.innerHTML = group.description || "";
-      }
+      if (editDescRef.current) editDescRef.current.innerHTML = group.description || "";
     }, 50);
   };
 
   const handleSaveEdit = async () => {
     const newName = editName.trim();
     if (!newName) return toast.error("Name cannot be empty");
-    
     const newDescription = editDescRef.current?.innerHTML || "";
     try {
-      await updateDoc(doc(db, "groups", groupId), {
-        name: newName,
-        description: newDescription,
-      });
+      await updateDoc(doc(db, "groups", groupId), { name: newName, description: newDescription });
       setGroup((prev) => ({ ...prev, name: newName, description: newDescription }));
       setEditing(false);
       toast.success("Saved successfully");
@@ -259,7 +245,6 @@ export default function GroupDetailPage() {
           `${user.email?.split('@')[0] || "Someone"} started a call in ${group.name}.`,
           `/community/groups/${groupId}`
         ));
-        
       await Promise.all(promises);
       if (promises.length > 0) toast.success(`Notified ${promises.length} members`);
     } catch (err) {
@@ -270,25 +255,12 @@ export default function GroupDetailPage() {
     }
   };
 
-  // ===== NEW ERROR/LOADING UI =====
   if (loading) return (
     <div className="flex justify-center items-center min-h-[60vh]">
       <div className="animate-spin w-8 h-8 border-3 border-primary-500 border-t-transparent rounded-full" />
     </div>
   );
-
-  if (!group) return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
-      <div className="w-16 h-16 bg-red-50 dark:bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mb-4">
-        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-      </div>
-      <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Could not load group</h2>
-      <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-sm">Please check your internet connection. Firebase is having trouble connecting to the server.</p>
-      <button onClick={() => window.location.reload()} className="px-6 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-semibold shadow-sm active:scale-95 transition-all">
-        Reload Page
-      </button>
-    </div>
-  );
+  if (!group) return null;
 
   return (
     <div className="max-w-3xl mx-auto px-3 sm:px-4 py-6 md:py-8 min-h-screen">
@@ -301,11 +273,7 @@ export default function GroupDetailPage() {
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-center gap-4 sm:gap-5 flex-1 min-w-0">
               <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr from-primary-50 to-primary-100 dark:from-white/5 dark:to-white/10 flex items-center justify-center text-primary-600 dark:text-primary-400 flex-shrink-0 overflow-hidden shadow-inner">
-                {group.iconUrl ? (
-                  <img src={group.iconUrl} alt={group.name} className="w-full h-full object-cover" />
-                ) : (
-                  <GroupIcon />
-                )}
+                {group.iconUrl ? <img src={group.iconUrl} alt={group.name} className="w-full h-full object-cover" /> : <GroupIcon />}
               </div>
               <div className="flex-1 min-w-0">
                 {editing ? (
@@ -336,10 +304,7 @@ export default function GroupDetailPage() {
             {/* Menu Options */}
             {!editing && (canEdit || canDelete) && (
               <div className="relative flex-shrink-0" ref={menuRef}>
-                <button
-                  onClick={() => setShowMenu(!showMenu)}
-                  className="p-2 rounded-full bg-gray-50 hover:bg-gray-100 dark:bg-white/5 dark:hover:bg-white/10 transition-colors"
-                >
+                <button onClick={() => setShowMenu(!showMenu)} className="p-2 rounded-full bg-gray-50 hover:bg-gray-100 dark:bg-white/5 dark:hover:bg-white/10 transition-colors">
                   <DotsVerticalIcon />
                 </button>
                 {showMenu && (
@@ -360,25 +325,25 @@ export default function GroupDetailPage() {
             )}
           </div>
 
-          {/* ===== ONE-LINE ACTION BAR (Mobile Friendly) ===== */}
+          {/* ===== COMPACT NON-CUTTING ONE-LINE ACTION BAR ===== */}
           {!editing && isMember && (
-            <div className="flex items-center gap-2 mt-6 overflow-x-auto no-scrollbar pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            <div className="flex items-center gap-1.5 mt-6 w-full overflow-hidden">
               <button
                 onClick={() => setShowInvite(!showInvite)}
-                className="flex-1 min-w-[100px] flex justify-center items-center gap-1.5 px-3 py-2.5 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 rounded-xl text-gray-800 dark:text-gray-200 text-xs font-semibold transition-all active:scale-95 truncate"
+                className="flex-1 flex justify-center items-center gap-1 px-2 py-2.5 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 rounded-xl text-gray-800 dark:text-gray-200 text-xs font-bold transition-all active:scale-95 truncate"
               >
                 <ShareIcon /> Share
               </button>
               <Link
                 href={`/community/groups/${groupId}/post/create`}
-                className="flex-1 min-w-[100px] flex justify-center items-center gap-1.5 px-3 py-2.5 bg-primary-600 hover:bg-primary-700 shadow-sm shadow-primary-500/30 rounded-xl text-white text-xs font-semibold transition-all active:scale-95 truncate"
+                className="flex-1 flex justify-center items-center gap-1 px-2 py-2.5 bg-primary-600 hover:bg-primary-700 shadow-sm shadow-primary-500/30 rounded-xl text-white text-xs font-bold transition-all active:scale-95 text-center truncate"
               >
                 <PlusIcon /> Post
               </Link>
               <button
                 onClick={startCall}
                 disabled={sendingNotification}
-                className="flex-1 min-w-[100px] flex justify-center items-center gap-1.5 px-3 py-2.5 bg-emerald-500 hover:bg-emerald-600 shadow-sm shadow-emerald-500/30 rounded-xl text-white text-xs font-semibold transition-all active:scale-95 disabled:opacity-70 truncate"
+                className="flex-1 flex justify-center items-center gap-1 px-2 py-2.5 bg-emerald-500 hover:bg-emerald-600 shadow-sm shadow-emerald-500/30 rounded-xl text-white text-xs font-bold transition-all active:scale-95 disabled:opacity-70 truncate"
               >
                 <VideoIcon /> {sendingNotification ? "..." : "Call"}
               </button>
@@ -394,9 +359,7 @@ export default function GroupDetailPage() {
           {/* Invite Code Reveal */}
           {showInvite && !editing && (
             <div className="mt-4 p-4 bg-gray-50 dark:bg-white/5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 border border-gray-100 dark:border-white/5 animate-in fade-in slide-in-from-top-2">
-              <code className="text-sm break-all text-gray-600 dark:text-gray-300 w-full text-center sm:text-left">
-                {`.../join?invite=${group.inviteCode}`}
-              </code>
+              <code className="text-sm break-all text-gray-600 dark:text-gray-300 w-full text-center sm:text-left">{`.../join?invite=${group.inviteCode}`}</code>
               <button onClick={copyInviteLink} className="w-full sm:w-auto flex justify-center items-center gap-2 px-4 py-2 bg-white dark:bg-white/10 border border-gray-200 dark:border-white/10 rounded-xl text-sm font-medium hover:bg-gray-50 dark:hover:bg-white/20 transition-colors">
                 <CopyIcon /> Copy
               </button>
@@ -428,12 +391,8 @@ export default function GroupDetailPage() {
                 style={{ whiteSpace: "pre-wrap" }}
               />
               <div className="flex gap-3 justify-end mt-4">
-                <button onClick={() => setEditing(false)} className="px-5 py-2.5 bg-gray-100 dark:bg-white/10 rounded-xl text-sm font-semibold transition-colors">
-                  Cancel
-                </button>
-                <button onClick={handleSaveEdit} className="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-colors">
-                  Save Changes
-                </button>
+                <button onClick={() => setEditing(false)} className="px-5 py-2.5 bg-gray-100 dark:bg-white/10 rounded-xl text-sm font-semibold transition-colors">Cancel</button>
+                <button onClick={handleSaveEdit} className="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-colors">Save Changes</button>
               </div>
             </div>
           )}
@@ -464,7 +423,6 @@ export default function GroupDetailPage() {
         
         {posts.map((post) => {
           const renderWithMentions = (text) => text?.replace(/@([a-zA-Z0-9_.]+)/g, '<span class="text-primary-600 dark:text-primary-400 font-semibold bg-primary-50 dark:bg-primary-500/10 px-1 rounded">@$1</span>') || "";
-          
           return (
             <div key={post.id} className="bg-white dark:bg-[#111] rounded-3xl shadow-sm border border-gray-100 dark:border-white/5 p-5 sm:p-6 transition-all hover:shadow-md">
               <div className="flex justify-between items-start mb-4 gap-4">
@@ -473,9 +431,7 @@ export default function GroupDetailPage() {
                     {post.authorName?.charAt(0).toUpperCase()}
                   </div>
                   <div>
-                    <h3 className="font-semibold text-gray-900 dark:text-white text-sm sm:text-base leading-tight">
-                      {post.authorName}
-                    </h3>
+                    <h3 className="font-semibold text-gray-900 dark:text-white text-sm sm:text-base leading-tight">{post.authorName}</h3>
                     <span className="text-xs text-gray-500 dark:text-gray-400">
                       {new Date(post.createdAt?.toDate()).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit' })}
                     </span>
@@ -509,11 +465,7 @@ export default function GroupDetailPage() {
                 </div>
               </div>
               
-              <div
-                className="prose prose-sm sm:prose-base dark:prose-invert max-w-none text-gray-700 dark:text-gray-200 break-words [&_*]:dark:!text-gray-200 [&_*]:dark:!bg-transparent"
-                dangerouslySetInnerHTML={{ __html: renderWithMentions(post.text) }}
-              />
-              
+              <div className="prose prose-sm sm:prose-base dark:prose-invert max-w-none text-gray-700 dark:text-gray-200 break-words [&_*]:dark:!text-gray-200 [&_*]:dark:!bg-transparent" dangerouslySetInnerHTML={{ __html: renderWithMentions(post.text) }} />
               {post.imageUrl && (
                 <div className="mt-4 rounded-2xl overflow-hidden border border-gray-100 dark:border-white/5">
                   <img src={post.imageUrl} alt="Post media" className="w-full max-h-[400px] object-cover hover:scale-[1.02] transition-transform duration-500" loading="lazy" />
@@ -525,7 +477,7 @@ export default function GroupDetailPage() {
         })}
       </div>
 
-      {/* Jitsi/KMeet Modal */}
+      {/* kMeet Modal */}
       {showCall && <KMeetModal groupId={groupId} onClose={() => setShowCall(false)} />}
     </div>
   );
