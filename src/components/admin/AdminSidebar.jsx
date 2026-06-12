@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { HiLibrary } from "react-icons/hi";
 
 /* ────── सभी आइकॉन इनलाइन SVG ────── */
 const HomeIcon = () => (
@@ -40,15 +41,12 @@ const ShieldCheckIcon = () => (
 const UserGroupIcon = () => (
   <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
 );
-
-// ✅ Notification Bell Icon (replaces missing HiBell)
 const BellIcon = () => (
   <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
     <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
     <path d="M13.73 21a2 2 0 01-3.46 0" />
   </svg>
 );
-
 const MenuIcon = () => (
   <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
 );
@@ -67,9 +65,10 @@ const links = [
   { href: "/admin/wallet", label: "Wallet Control", icon: <WalletIcon /> },
   { href: "/admin/analytics", label: "Analytics", icon: <AnalyticsIcon /> },
   { href: "/admin/courses", label: "Courses", icon: <CoursesIcon /> },
+  { href: "/admin/library/categories", label: "Library", icon: <HiLibrary className="w-5 h-5" /> }, // 👈 Added React-Icon Library Here
   { href: "/admin/verifications", label: "Verifications", icon: <ShieldCheckIcon /> },
   { href: "/admin/community/groups", label: "Community Groups", icon: <UserGroupIcon /> },
-  { href: "/admin/notifications", label: "Notify Users", icon: <BellIcon /> },   // ✅ fixed: inline SVG bell
+  { href: "/admin/notifications", label: "Notify Users", icon: <BellIcon /> },
 ];
 
 export default function AdminSidebar() {
@@ -78,54 +77,63 @@ export default function AdminSidebar() {
 
   return (
     <>
-      {/* Mobile Toggle Button */}
+      {/* Mobile Sticky Floating Toggle Button */}
       <button
-        className="md:hidden fixed top-4 left-4 z-50 bg-primary-600 text-white p-2 rounded-full shadow-lg"
+        className="md:hidden fixed top-4 left-4 z-50 bg-primary-600 text-white p-2.5 rounded-full shadow-lg transition-transform active:scale-90"
         onClick={() => setOpen(!open)}
+        aria-label="Toggle Navigation Menu"
       >
         {open ? <CloseIcon /> : <MenuIcon />}
       </button>
 
-      {/* Overlay for mobile */}
+      {/* Modern Blur Overlay for mobile view */}
       {open && (
         <div
-          className="md:hidden fixed inset-0 bg-black/50 z-40"
+          className="md:hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-40 animate-in fade-in duration-200"
           onClick={() => setOpen(false)}
         />
       )}
 
-      {/* Sidebar */}
+      {/* Premium Dashboard Sidebar Container */}
       <aside
-        className={`fixed top-0 left-0 h-full w-64 bg-white dark:bg-gray-800 border-r p-6 z-40 transform transition-transform duration-200 ${
+        className={`fixed top-0 left-0 h-full w-66 bg-white dark:bg-[#111] border-r border-gray-100 dark:border-white/5 p-6 z-40 transform transition-transform duration-300 ease-in-out ${
           open ? "translate-x-0" : "-translate-x-full"
-        } md:translate-x-0 md:static md:h-screen overflow-y-auto`}
+        } md:translate-x-0 md:static md:h-screen overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]`}
       >
-        {/* Logo / Brand */}
-        <Link
-          href="/"
-          className="text-2xl font-bold text-primary-600 mb-8 block"
-          onClick={() => setOpen(false)}
-        >
-          Quick Shop
-        </Link>
+        {/* Main Brand Identifier */}
+        <div className="mb-8 pt-2 md:pt-0">
+          <Link
+            href="/"
+            onClick={() => setOpen(false)}
+            className="text-2xl font-black bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent tracking-tight"
+          >
+            Quick Shop
+          </Link>
+          <span className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mt-1">Admin Panel</span>
+        </div>
 
-        {/* Navigation Links */}
-        <nav className="flex flex-col gap-3">
-          {links.map(link => (
-            <Link
-              key={link.href}
-              href={link.href}
-              onClick={() => setOpen(false)}
-              className={`flex items-center gap-3 p-3 rounded-lg transition ${
-                pathname === link.href
-                  ? "bg-primary-100 dark:bg-primary-900/30 text-primary-600"
-                  : "hover:bg-gray-100 dark:hover:bg-gray-700"
-              }`}
-            >
-              {link.icon}
-              {link.label}
-            </Link>
-          ))}
+        {/* Navigation Core Stack */}
+        <nav className="flex flex-col gap-1.5">
+          {links.map(link => {
+            const isActive = pathname === link.href;
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                onClick={() => setOpen(false)}
+                className={`flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 active:scale-[0.98] ${
+                  isActive
+                    ? "bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 font-bold shadow-sm"
+                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white"
+                }`}
+              >
+                <span className={`transition-colors ${isActive ? "text-primary-600 dark:text-primary-400" : "text-gray-400 dark:text-gray-500"}`}>
+                  {link.icon}
+                </span>
+                {link.label}
+              </Link>
+            );
+          })}
         </nav>
       </aside>
     </>
