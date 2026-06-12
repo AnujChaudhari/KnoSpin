@@ -105,6 +105,8 @@ export default function Header() {
             <Link href="/" onClick={() => setMenuOpen(false)} className="text-gray-800 dark:text-gray-200 font-medium">Home</Link>
             <Link href="/courses" onClick={() => setMenuOpen(false)} className="text-gray-800 dark:text-gray-200 font-medium">Courses</Link>
             <Link href="/community/groups" onClick={() => setMenuOpen(false)} className="text-gray-800 dark:text-gray-200 font-medium">Community</Link>
+            {/* ✅ Added Library Link For Mobile Layout */}
+            <Link href="/library" onClick={() => setMenuOpen(false)} className="text-gray-800 dark:text-gray-200 font-medium">Library</Link>
             <Link href="/products" onClick={() => setMenuOpen(false)} className="text-gray-800 dark:text-gray-200 font-medium">Products</Link>
             <Link href="/pricing" onClick={() => setMenuOpen(false)} className="text-gray-800 dark:text-gray-200 font-medium">Pricing</Link>
 
@@ -142,6 +144,8 @@ export default function Header() {
         <Link href="/" className="hover:text-primary-600 dark:text-gray-300">Home</Link>
         <Link href="/courses" className="hover:text-primary-600 dark:text-gray-300">Courses</Link>
         <Link href="/community/groups" className="hover:text-primary-600 dark:text-gray-300">Community</Link>
+        {/* ✅ Added Library Link For Desktop Layout */}
+        <Link href="/library" className="hover:text-primary-600 dark:text-gray-300">Library</Link>
         <Link href="/products" className="hover:text-primary-600 dark:text-gray-300">Products</Link>
         <Link href="/pricing" className="hover:text-primary-600 dark:text-gray-300">Pricing</Link>
 
