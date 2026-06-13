@@ -41,13 +41,10 @@ const ShieldCheckIcon = () => (
   <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
 );
 const UserGroupIcon = () => (
-  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>;
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
 );
 const BellIcon = () => (
-  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-    <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
-    <path d="M13.73 21a2 2 0 01-3.46 0" />
-  </svg>
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
 );
 const MenuIcon = () => (
   <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
@@ -67,7 +64,7 @@ const links = [
   { href: "/admin/wallet", label: "Wallet Control", icon: <WalletIcon /> },
   { href: "/admin/analytics", label: "Analytics", icon: <AnalyticsIcon /> },
   { href: "/admin/courses", label: "Courses", icon: <CoursesIcon /> },
-  { href: "/admin/library/categories", label: "Library", icon: <LibraryIcon /> },
+  { href: "/admin/library", label: "Library", icon: <LibraryIcon /> },
   { href: "/admin/verifications", label: "Verifications", icon: <ShieldCheckIcon /> },
   { href: "/admin/community/groups", label: "Community Groups", icon: <UserGroupIcon /> },
   { href: "/admin/notifications", label: "Notify Users", icon: <BellIcon /> },
@@ -98,24 +95,24 @@ export default function AdminSidebar() {
 
       {/* Premium Dashboard Sidebar Container */}
       <aside
-        className={`fixed top-0 left-0 h-screen max-h-screen w-66 bg-white dark:bg-[#111] border-r border-gray-100 dark:border-white/5 p-6 z-40 transform transition-transform duration-300 ease-in-out overflow-y-auto no-scrollbar md:translate-x-0 md:sticky md:top-0 flex flex-col ${
+        className={`fixed top-0 left-0 h-screen w-66 bg-white dark:bg-[#111] border-r border-gray-100 dark:border-white/5 p-6 z-40 transform transition-transform duration-300 ease-in-out overflow-y-auto no-scrollbar md:translate-x-0 md:sticky md:top-0 flex flex-col ${
           open ? "translate-x-0" : "-translate-x-full"
-        } [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]`}
+        }`}
       >
         {/* Main Brand Identifier */}
-        <div className="mb-8 pt-2 md:pt-0 flex flex-col flex-shrink-0">
+        <div className="mb-8 pt-2 md:pt-0 flex-shrink-0">
           <Link
             href="/"
             onClick={() => setOpen(false)}
-            className="text-2xl font-black bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent tracking-tight w-max"
+            className="text-2xl font-black bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent tracking-tight"
           >
             Quick Shop
           </Link>
-          <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mt-1">Admin Panel</span>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mt-1 block">Admin Panel</span>
         </div>
 
         {/* Navigation Core Stack */}
-        <nav className="flex flex-col gap-1.5 flex-1">
+        <nav className="flex flex-col gap-1.5 flex-1 overflow-y-auto no-scrollbar">
           {links.map(link => {
             const isActive = pathname === link.href;
             return (
