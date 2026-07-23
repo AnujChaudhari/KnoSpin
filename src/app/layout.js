@@ -12,13 +12,17 @@ export const dynamic = 'force-dynamic'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata = {
-  title: 'Quick Shop – Your Mobile Store',
-  description: 'Shop digital & physical products. Earn coins with referrals. Fast delivery & great deals.',
+  title: {
+    default: 'SPINOVA - Marketplace, Community & Digital Library',
+    template: '%s | SPINOVA'
+  },
+  description: 'Spin the wheel, earn rewards, join communities, read free books, and shop unique products. India\'s gamified social ecosystem.',
+  keywords: 'gamified marketplace, community groups, digital library, spin to earn, social commerce india, online earning platform',
   openGraph: {
-    title: 'Quick Shop',
-    description: 'Shop digital & physical products. Earn coins with referrals.',
-    url: 'https://quickshoppro.vercel.app',
-    siteName: 'Quick Shop',
+    title: 'SPINOVA - A New Spin on Community & Commerce',
+    description: 'Spin, earn rewards, connect with communities, and access a vast digital library. Join the SPINOVA ecosystem today!',
+    url: 'https://quickshoppro.vercel.app', // Baad mein spinova.com kar dena
+    siteName: 'SPINOVA',
     locale: 'en_IN',
     type: 'website',
   },
@@ -26,6 +30,10 @@ export const metadata = {
     index: true,
     follow: true,
   },
+  // Thoda sa extra SEO boost (optional)
+  verification: {
+    // Agar Google Search Console hai toh yahan daalna
+  }
 }
 
 export default function RootLayout({ children }) {
