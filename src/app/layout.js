@@ -1,5 +1,5 @@
 import './globals.css'
-import { Inter, Poppins } from 'next/font/google' // ← Poppins import kiya
+import { Inter, Poppins } from 'next/font/google'
 import ClientProviders from '@/components/ClientProviders'
 
 // Force dynamic rendering – prevents static build errors
@@ -12,9 +12,9 @@ const inter = Inter({
 
 // Poppins – सिर्फ Brand Name (KnoSpin) के लिए Heavy/Bold weights
 const poppins = Poppins({
-  weight: ['700', '800'], // Extrabold के लिए
+  weight: ['700', '800'],
   subsets: ['latin'],
-  variable: '--font-poppins', // CSS variable (tailwind में use करने के लिए)
+  variable: '--font-poppins',
 })
 
 // ─── SEO मेटाडेटा (KnoSpin Branding) ───
@@ -28,7 +28,7 @@ export const metadata = {
   openGraph: {
     title: 'KnoSpin - Learn, Spin & Grow',
     description: 'Join KnoSpin to learn new skills, spin for rewards, and connect with a like-minded community. Your all-in-one ed-tech platform.',
-    url: 'https://quickshoppro.vercel.app', // Baad mein knospin.com kar dena
+    url: 'https://quickshoppro.vercel.app',
     siteName: 'KnoSpin',
     locale: 'en_IN',
     type: 'website',
@@ -38,7 +38,8 @@ export const metadata = {
     follow: true,
   },
   verification: {
-    // Agar Google Search Console hai toh yahan daalna
+    // AdSense verification (optional but recommended)
+    google: 'ca-pub-2369556419445213', // Isse Google Search Console mein bhi verify kar sakte ho
   }
 }
 
@@ -50,6 +51,16 @@ export default function RootLayout({ children }) {
         <link rel="manifest" href="/manifest.json" />
         {/* favicon */}
         <link rel="icon" href="/logo.png" />
+        
+        {/* 🚨 GOOGLE ADSENSE VERIFICATION (Crawler ke liye) */}
+        <meta name="google-adsense-account" content="ca-pub-2369556419445213" />
+
+        {/* 🚨 GOOGLE ADSENSE RUNTIME SCRIPT (Ads render karne ke liye) */}
+        <script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2369556419445213"
+          crossOrigin="anonymous"
+        />
       </head>
       <body className={`${inter.className} ${poppins.variable} min-h-screen flex flex-col`}>
         <ClientProviders>{children}</ClientProviders>
