@@ -71,16 +71,22 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
       <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-        {/* लोगो + नाम + टैगलाइन (SPINOVA ब्रांडिंग) */}
+        {/* लोगो + नाम + टैगलाइन (KnoSpin ब्रांडिंग) */}
         <Link href="/" className="flex items-center gap-2">
-          <img src="/logo.png" alt="SPINOVA" className="h-7 md:h-8 w-auto" />
+          <img src="/logo.png" alt="KnoSpin" className="h-8 md:h-10 w-auto" />
           <div className="flex flex-col items-start leading-tight">
-            <span className="text-xl md:text-2xl font-bold bg-gradient-to-r from-primary-600 to-purple-600 bg-clip-text text-transparent">
-              SPINOVA
+            <span className={`
+              text-xl md:text-2xl font-extrabold 
+              bg-gradient-to-r from-amber-400 via-pink-500 to-purple-600 
+              bg-clip-text text-transparent 
+              tracking-wider
+              font-['Poppins'] // या अगर layout से Poppins import किया है तो className में ${poppins.className} डालें
+            `}>
+              KnoSpin
             </span>
             {/* ✅ Mobile पर छिपा, Tablet/Desktop पर दिखेगा */}
             <span className="text-[9px] text-gray-400 dark:text-gray-500 font-medium tracking-widest hidden sm:block">
-              SPIN · EARN · CONNECT
+              LEARN · SPIN · GROW
             </span>
           </div>
         </Link>
@@ -88,7 +94,6 @@ export default function Header() {
         {/* दाएँ आइकॉन */}
         <div className="flex items-center gap-4">
           <ThemeToggle />
-          {/* NotificationBell केवल लॉगिन यूज़र के लिए लोड करें */}
           {user && <NotificationBell />}
           <Link href="/cart" className="relative">
             <CartIcon />
@@ -104,7 +109,7 @@ export default function Header() {
         </div>
       </div>
 
-      {/* मोबाइल मेनू - पूरी तरह मोबाइल फ्रेंडली (पुराना स्ट्रक्चर वैसा ही) */}
+      {/* मोबाइल मेनू - पूरी तरह मोबाइल फ्रेंडली */}
       {menuOpen && (
         <nav className="md:hidden bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 overflow-y-auto max-h-[80vh]">
           <div className="flex flex-col p-4 space-y-3">
