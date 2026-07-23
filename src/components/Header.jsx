@@ -71,12 +71,18 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
       <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-        {/* लोगो + नाम */}
+        {/* लोगो + नाम + टैगलाइन (SPINOVA ब्रांडिंग) */}
         <Link href="/" className="flex items-center gap-2">
-          <img src="/logo.png" alt="Quick Shop" className="h-7 md:h-8 w-auto" />
-          <span className="text-xl md:text-2xl font-bold bg-gradient-to-r from-primary-600 to-purple-600 bg-clip-text text-transparent">
-            Quick Shop
-          </span>
+          <img src="/logo.png" alt="SPINOVA" className="h-7 md:h-8 w-auto" />
+          <div className="flex flex-col items-start leading-tight">
+            <span className="text-xl md:text-2xl font-bold bg-gradient-to-r from-primary-600 to-purple-600 bg-clip-text text-transparent">
+              SPINOVA
+            </span>
+            {/* ✅ Mobile पर छिपा, Tablet/Desktop पर दिखेगा */}
+            <span className="text-[9px] text-gray-400 dark:text-gray-500 font-medium tracking-widest hidden sm:block">
+              SPIN · EARN · CONNECT
+            </span>
+          </div>
         </Link>
 
         {/* दाएँ आइकॉन */}
@@ -98,14 +104,13 @@ export default function Header() {
         </div>
       </div>
 
-      {/* मोबाइल मेनू */}
+      {/* मोबाइल मेनू - पूरी तरह मोबाइल फ्रेंडली (पुराना स्ट्रक्चर वैसा ही) */}
       {menuOpen && (
         <nav className="md:hidden bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 overflow-y-auto max-h-[80vh]">
           <div className="flex flex-col p-4 space-y-3">
             <Link href="/" onClick={() => setMenuOpen(false)} className="text-gray-800 dark:text-gray-200 font-medium">Home</Link>
             <Link href="/courses" onClick={() => setMenuOpen(false)} className="text-gray-800 dark:text-gray-200 font-medium">Courses</Link>
             <Link href="/community/groups" onClick={() => setMenuOpen(false)} className="text-gray-800 dark:text-gray-200 font-medium">Community</Link>
-            {/* ✅ Added Library Link For Mobile Layout */}
             <Link href="/library" onClick={() => setMenuOpen(false)} className="text-gray-800 dark:text-gray-200 font-medium">Library</Link>
             <Link href="/products" onClick={() => setMenuOpen(false)} className="text-gray-800 dark:text-gray-200 font-medium">Products</Link>
             <Link href="/pricing" onClick={() => setMenuOpen(false)} className="text-gray-800 dark:text-gray-200 font-medium">Pricing</Link>
@@ -139,12 +144,11 @@ export default function Header() {
         </nav>
       )}
 
-      {/* डेस्कटॉप मेनू */}
+      {/* डेस्कटॉप मेनू - सभी लिंक्स के साथ */}
       <div className="hidden md:flex max-w-7xl mx-auto px-4 pb-2 gap-6 text-sm items-center border-t border-gray-100 dark:border-gray-800 pt-2">
         <Link href="/" className="hover:text-primary-600 dark:text-gray-300">Home</Link>
         <Link href="/courses" className="hover:text-primary-600 dark:text-gray-300">Courses</Link>
         <Link href="/community/groups" className="hover:text-primary-600 dark:text-gray-300">Community</Link>
-        {/* ✅ Added Library Link For Desktop Layout */}
         <Link href="/library" className="hover:text-primary-600 dark:text-gray-300">Library</Link>
         <Link href="/products" className="hover:text-primary-600 dark:text-gray-300">Products</Link>
         <Link href="/pricing" className="hover:text-primary-600 dark:text-gray-300">Pricing</Link>
