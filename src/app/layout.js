@@ -1,28 +1,35 @@
 import './globals.css'
-import { Inter } from 'next/font/google'
+import { Inter, Poppins } from 'next/font/google' // ← Poppins import kiya
 import ClientProviders from '@/components/ClientProviders'
-// import nextDynamic from 'next/dynamic'
 
 // Force dynamic rendering – prevents static build errors
 export const dynamic = 'force-dynamic'
 
-// Load DailyReward only on the client (no SSR)
-// const DailyReward = nextDynamic(() => import('@/components/DailyReward'), { ssr: false })
+// ─── फॉन्ट कॉन्फ़िगरेशन ───
+const inter = Inter({ 
+  subsets: ['latin'] 
+})
 
-const inter = Inter({ subsets: ['latin'] })
+// Poppins – सिर्फ Brand Name (KnoSpin) के लिए Heavy/Bold weights
+const poppins = Poppins({
+  weight: ['700', '800'], // Extrabold के लिए
+  subsets: ['latin'],
+  variable: '--font-poppins', // CSS variable (tailwind में use करने के लिए)
+})
 
+// ─── SEO मेटाडेटा (KnoSpin Branding) ───
 export const metadata = {
   title: {
-    default: 'SPINOVA - Marketplace, Community & Digital Library',
-    template: '%s | SPINOVA'
+    default: 'KnoSpin - Learn, Spin & Grow | Marketplace, Community & Library',
+    template: '%s | KnoSpin'
   },
-  description: 'Spin the wheel, earn rewards, join communities, read free books, and shop unique products. India\'s gamified social ecosystem.',
-  keywords: 'gamified marketplace, community groups, digital library, spin to earn, social commerce india, online earning platform',
+  description: 'Upskill with expert courses, spin the wheel to earn daily rewards, connect with community groups, read free books, and discover unique products. India\'s gamified ed-tech ecosystem.',
+  keywords: 'online courses, gamified learning, spin to earn, community groups, digital library, skill development, social learning india',
   openGraph: {
-    title: 'SPINOVA - A New Spin on Community & Commerce',
-    description: 'Spin, earn rewards, connect with communities, and access a vast digital library. Join the SPINOVA ecosystem today!',
-    url: 'https://quickshoppro.vercel.app', // Baad mein spinova.com kar dena
-    siteName: 'SPINOVA',
+    title: 'KnoSpin - Learn, Spin & Grow',
+    description: 'Join KnoSpin to learn new skills, spin for rewards, and connect with a like-minded community. Your all-in-one ed-tech platform.',
+    url: 'https://quickshoppro.vercel.app', // Baad mein knospin.com kar dena
+    siteName: 'KnoSpin',
     locale: 'en_IN',
     type: 'website',
   },
@@ -30,7 +37,6 @@ export const metadata = {
     index: true,
     follow: true,
   },
-  // Thoda sa extra SEO boost (optional)
   verification: {
     // Agar Google Search Console hai toh yahan daalna
   }
@@ -45,23 +51,23 @@ export default function RootLayout({ children }) {
         {/* favicon */}
         <link rel="icon" href="/logo.png" />
       </head>
-      <body className={`${inter.className} min-h-screen flex flex-col`}>
+      <body className={`${inter.className} ${poppins.variable} min-h-screen flex flex-col`}>
         <ClientProviders>{children}</ClientProviders>
-      {/* Daily Reward popup (client‑only) */}
+        {/* Daily Reward popup (client‑only) */}
         {/* <DailyReward /> */}
-<script
-  dangerouslySetInnerHTML={{
-    __html: `
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(function(registrations) {
-          for(let registration of registrations) {
-            registration.unregister();
-          }
-        });
-      }
-    `,
-  }}
-/>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                  for(let registration of registrations) {
+                    registration.unregister();
+                  }
+                });
+              }
+            `,
+          }}
+        />
       </body>
     </html>
   )
