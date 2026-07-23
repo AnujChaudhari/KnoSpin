@@ -57,16 +57,16 @@ export default function Footer() {
     <footer className="border-t bg-white dark:bg-gray-800 mt-12">
       {/* ========== Mobile Bottom Navigation ========== */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t z-50 flex justify-around py-2">
-        <Link href="/" className="flex flex-col items-center text-xs gap-1 text-gray-600 dark:text-gray-300 hover:text-primary-600">
+        <Link href="/" className="flex flex-col items-center text-xs gap-1 text-gray-600 dark:text-gray-300 hover:text-purple-600">
           <HomeIcon /> Home
         </Link>
-        <Link href="/products" className="flex flex-col items-center text-xs gap-1 text-gray-600 dark:text-gray-300 hover:text-primary-600">
+        <Link href="/products" className="flex flex-col items-center text-xs gap-1 text-gray-600 dark:text-gray-300 hover:text-purple-600">
           <ShopIcon /> Shop
         </Link>
-        <Link href="/cart" className="flex flex-col items-center text-xs gap-1 text-gray-600 dark:text-gray-300 hover:text-primary-600">
+        <Link href="/cart" className="flex flex-col items-center text-xs gap-1 text-gray-600 dark:text-gray-300 hover:text-purple-600">
           <CartIcon /> Cart
         </Link>
-        <Link href="/dashboard" className="flex flex-col items-center text-xs gap-1 text-gray-600 dark:text-gray-300 hover:text-primary-600">
+        <Link href="/dashboard" className="flex flex-col items-center text-xs gap-1 text-gray-600 dark:text-gray-300 hover:text-purple-600">
           <UserIcon /> Account
         </Link>
       </div>
@@ -76,51 +76,51 @@ export default function Footer() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
           {/* Column 1 – About */}
           <div>
-            <Link href="/" className="text-xl font-bold bg-gradient-to-r from-primary-600 to-purple-600 bg-clip-text text-transparent">
-              Quick Shop
+            <Link href="/" className="text-xl font-bold bg-gradient-to-r from-amber-400 via-pink-500 to-purple-600 bg-clip-text text-transparent font-['Poppins']">
+              KnoSpin
             </Link>
-            <p className="text-sm text-gray-500 mt-3 leading-relaxed">
-              Your one-stop mobile store for digital and physical products. Fast delivery, easy returns, and exciting rewards.
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-3 leading-relaxed">
+              India's gamified ed-tech ecosystem. Learn new skills, spin to earn daily rewards, connect with communities, and explore our digital library.
             </p>
           </div>
 
           {/* Column 2 – Quick Links */}
           <div>
-            <h4 className="font-bold mb-4 flex items-center gap-2">
+            <h4 className="font-bold mb-4 flex items-center gap-2 text-purple-800 dark:text-purple-300">
               <HeartIcon /> Quick Links
             </h4>
             <ul className="text-sm space-y-3">
-              <li><Link href="/" className="text-gray-600 dark:text-gray-300 hover:text-primary-600 transition">Home</Link></li>
-              <li><Link href="/courses">Courses</Link></li>
-              <li><Link href="/community/groups">Community</Link></li>
-              <li><Link href="/library">Library</Link></li>
-              <li><Link href="/products" className="text-gray-600 dark:text-gray-300 hover:text-primary-600 transition">All Products</Link></li>
-              <li><Link href="/dashboard" className="text-gray-600 dark:text-gray-300 hover:text-primary-600 transition">My Account</Link></li>
-              <li><Link href="/dashboard/referrals" className="text-gray-600 dark:text-gray-300 hover:text-primary-600 transition">Refer & Earn</Link></li>
-              <li><Link href="/leaderboard" className="text-gray-600 dark:text-gray-300 hover:text-primary-600 transition flex items-center gap-1"><LeaderboardIcon /> Leaderboard</Link></li>
+              <li><Link href="/" className="text-gray-600 dark:text-gray-300 hover:text-purple-600 transition">Home</Link></li>
+              <li><Link href="/courses" className="text-gray-600 dark:text-gray-300 hover:text-purple-600 transition">Courses</Link></li>
+              <li><Link href="/community/groups" className="text-gray-600 dark:text-gray-300 hover:text-purple-600 transition">Community</Link></li>
+              <li><Link href="/library" className="text-gray-600 dark:text-gray-300 hover:text-purple-600 transition">Library</Link></li>
+              <li><Link href="/products" className="text-gray-600 dark:text-gray-300 hover:text-purple-600 transition">All Products</Link></li>
+              <li><Link href="/dashboard" className="text-gray-600 dark:text-gray-300 hover:text-purple-600 transition">My Account</Link></li>
+              <li><Link href="/dashboard/referrals" className="text-gray-600 dark:text-gray-300 hover:text-purple-600 transition">Refer &amp; Earn</Link></li>
+              <li><Link href="/leaderboard" className="text-gray-600 dark:text-gray-300 hover:text-purple-600 transition flex items-center gap-1"><LeaderboardIcon /> Leaderboard</Link></li>
             </ul>
           </div>
 
           {/* Column 3 – Support & Policies */}
           <div>
-            <h4 className="font-bold mb-4 flex items-center gap-2">
-              <InfoIcon /> Support & Policies
+            <h4 className="font-bold mb-4 flex items-center gap-2 text-purple-800 dark:text-purple-300">
+              <InfoIcon /> Support &amp; Policies
             </h4>
             <ul className="text-sm space-y-3">
-              <li><Link href="/contact" className="text-gray-600 dark:text-gray-300 hover:text-primary-600 transition">Contact Us</Link></li>
-              <li><Link href="/faq" className="text-gray-600 dark:text-gray-300 hover:text-primary-600 transition">FAQ</Link></li>
-              <li><Link href="/returns" className="text-gray-600 dark:text-gray-300 hover:text-primary-600 transition">Returns & Refunds</Link></li>
-              <li><Link href="/shipping" className="text-gray-600 dark:text-gray-300 hover:text-primary-600 transition">Shipping Policy</Link></li>
-              <li><Link href="/privacy" className="text-gray-600 dark:text-gray-300 hover:text-primary-600 transition">Privacy Policy</Link></li>
-              <li><Link href="/terms" className="text-gray-600 dark:text-gray-300 hover:text-primary-600 transition">Terms & Conditions</Link></li>
-              <li><Link href="/about" className="text-gray-600 dark:text-gray-300 hover:text-primary-600 transition">About Us</Link></li>
+              <li><Link href="/contact" className="text-gray-600 dark:text-gray-300 hover:text-purple-600 transition">Contact Us</Link></li>
+              <li><Link href="/faq" className="text-gray-600 dark:text-gray-300 hover:text-purple-600 transition">FAQ</Link></li>
+              <li><Link href="/returns" className="text-gray-600 dark:text-gray-300 hover:text-purple-600 transition">Returns &amp; Refunds</Link></li>
+              <li><Link href="/shipping" className="text-gray-600 dark:text-gray-300 hover:text-purple-600 transition">Shipping Policy</Link></li>
+              <li><Link href="/privacy" className="text-gray-600 dark:text-gray-300 hover:text-purple-600 transition">Privacy Policy</Link></li>
+              <li><Link href="/terms" className="text-gray-600 dark:text-gray-300 hover:text-purple-600 transition">Terms &amp; Conditions</Link></li>
+              <li><Link href="/about" className="text-gray-600 dark:text-gray-300 hover:text-purple-600 transition">About Us</Link></li>
             </ul>
           </div>
         </div>
 
         {/* Bottom Bar */}
         <div className="border-t mt-8 pt-6 text-center text-sm text-gray-500">
-          © {new Date().getFullYear()} Quick Shop. All rights reserved.
+          &copy; {new Date().getFullYear()} KnoSpin. All rights reserved.
         </div>
       </div>
 
