@@ -40,7 +40,7 @@ const LogoutIcon = () => (
 
 export default function Header() {
   const { user, logout, isAdmin, loading } = useAuth();
-  const { cart } = useCart();
+  const { cart } = useCart(); // cart possibly undefined initially
   const [menuOpen, setMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -48,7 +48,7 @@ export default function Header() {
     setMounted(true);
   }, []);
 
-  // ────── लोडिंग स्केलेटन (हमेशा तुरंत दिखे) ──────
+  // ────── लोडिंग स्केलेटन ──────
   if (!mounted) {
     return (
       <header className="sticky top-0 z-50 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
@@ -67,11 +67,11 @@ export default function Header() {
     );
   }
 
-  // ────── असली हेडर ──────
+  // ────── असली हेडर (Safe Access with ?.) ──────
   return (
     <header className="sticky top-0 z-50 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
       <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-        {/* लोगो + नाम + टैगलाइन (KnoSpin ब्रांडिंग) */}
+        {/* लोगो + नाम + टैगलाइन (KnoSpin) */}
         <Link href="/" className="flex items-center gap-2">
           <img src="/logo.png" alt="KnoSpin" className="h-8 md:h-10 w-auto" />
           <div className="flex flex-col items-start leading-tight">
@@ -79,12 +79,10 @@ export default function Header() {
               text-xl md:text-2xl font-extrabold 
               bg-gradient-to-r from-amber-400 via-pink-500 to-purple-600 
               bg-clip-text text-transparent 
-              tracking-wider
-              font-['Poppins'] // या अगर layout से Poppins import किया है तो className में ${poppins.className} डालें
+              tracking-wider font-['Poppins']
             `}>
               KnoSpin
             </span>
-            {/* ✅ Mobile पर छिपा, Tablet/Desktop पर दिखेगा */}
             <span className="text-[9px] text-gray-400 dark:text-gray-500 font-medium tracking-widest hidden sm:block">
               LEARN · SPIN · GROW
             </span>
@@ -97,7 +95,8 @@ export default function Header() {
           {user && <NotificationBell />}
           <Link href="/cart" className="relative">
             <CartIcon />
-            {cart.length > 0 && (
+            {/* ✅ FIX: cart?.length use kiya (undefined se bachne ke liye) */}
+            {cart?.length > 0 && (
               <span className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full text-xs w-5 h-5 flex items-center justify-center">
                 {cart.length}
               </span>
@@ -109,7 +108,7 @@ export default function Header() {
         </div>
       </div>
 
-      {/* मोबाइल मेनू - पूरी तरह मोबाइल फ्रेंडली */}
+      {/* मोबाइल मेनू */}
       {menuOpen && (
         <nav className="md:hidden bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 overflow-y-auto max-h-[80vh]">
           <div className="flex flex-col p-4 space-y-3">
@@ -141,7 +140,7 @@ export default function Header() {
               ) : (
                 <div className="flex gap-3">
                   <Link href="/login" onClick={() => setMenuOpen(false)} className="flex-1 text-center py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-800 dark:text-gray-200 font-medium">Login</Link>
-                  <Link href="/signup" onClick={() => setMenuOpen(false)} className="flex-1 text-center py-2 bg-primary-600 text-white rounded-lg font-medium">Sign Up</Link>
+                  <Link href="/signup" onClick={() => setMenuOpen(false)} className="flex-1 text-center py-2 bg-purple-600 text-white rounded-lg font-medium">Sign Up</Link>
                 </div>
               )}
             </div>
@@ -149,30 +148,30 @@ export default function Header() {
         </nav>
       )}
 
-      {/* डेस्कटॉप मेनू - सभी लिंक्स के साथ */}
+      {/* डेस्कटॉप मेनू */}
       <div className="hidden md:flex max-w-7xl mx-auto px-4 pb-2 gap-6 text-sm items-center border-t border-gray-100 dark:border-gray-800 pt-2">
-        <Link href="/" className="hover:text-primary-600 dark:text-gray-300">Home</Link>
-        <Link href="/courses" className="hover:text-primary-600 dark:text-gray-300">Courses</Link>
-        <Link href="/community/groups" className="hover:text-primary-600 dark:text-gray-300">Community</Link>
-        <Link href="/library" className="hover:text-primary-600 dark:text-gray-300">Library</Link>
-        <Link href="/products" className="hover:text-primary-600 dark:text-gray-300">Products</Link>
-        <Link href="/pricing" className="hover:text-primary-600 dark:text-gray-300">Pricing</Link>
+        <Link href="/" className="hover:text-purple-600 dark:text-gray-300">Home</Link>
+        <Link href="/courses" className="hover:text-purple-600 dark:text-gray-300">Courses</Link>
+        <Link href="/community/groups" className="hover:text-purple-600 dark:text-gray-300">Community</Link>
+        <Link href="/library" className="hover:text-purple-600 dark:text-gray-300">Library</Link>
+        <Link href="/products" className="hover:text-purple-600 dark:text-gray-300">Products</Link>
+        <Link href="/pricing" className="hover:text-purple-600 dark:text-gray-300">Pricing</Link>
 
         <div className="ml-auto flex items-center gap-4">
           {user ? (
             <>
-              <Link href="/dashboard" className="flex items-center gap-1 hover:text-primary-600 dark:text-gray-300">
+              <Link href="/dashboard" className="flex items-center gap-1 hover:text-purple-600 dark:text-gray-300">
                 <UserIcon /> Dashboard
               </Link>
-              {isAdmin && <Link href="/admin" className="hover:text-primary-600 dark:text-gray-300">Admin</Link>}
+              {isAdmin && <Link href="/admin" className="hover:text-purple-600 dark:text-gray-300">Admin</Link>}
               <button onClick={logout} className="text-red-500 hover:text-red-600 flex items-center gap-1">
                 <LogoutIcon /> Logout
               </button>
             </>
           ) : (
             <>
-              <Link href="/login" className="hover:text-primary-600 dark:text-gray-300">Login</Link>
-              <Link href="/signup" className="bg-primary-600 text-white text-xs font-semibold py-1.5 px-3 rounded-lg hover:bg-primary-700 transition">Sign Up</Link>
+              <Link href="/login" className="hover:text-purple-600 dark:text-gray-300">Login</Link>
+              <Link href="/signup" className="bg-purple-600 text-white text-xs font-semibold py-1.5 px-3 rounded-lg hover:bg-purple-700 transition">Sign Up</Link>
             </>
           )}
         </div>
